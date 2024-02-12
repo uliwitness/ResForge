@@ -200,20 +200,22 @@ extension ResourceDataSource: NSSplitViewDelegate {
 
 // Sidebar type list
 extension ResourceDataSource: NSOutlineViewDelegate, NSOutlineViewDataSource {
+	
+	private func icon(named: String) -> Resource? {
+		var iconResource = document.editorManager.findResource(type: ResourceType("icl4"), name: named)
+		if iconResource == nil {
+			iconResource = document.editorManager.findResource(type: ResourceType("ICON"), name: named)
+		}
+		return iconResource
+	}
+	
     func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
         let view: NSTableCellView
         if let type = item as? ResourceType {
             let count = String(document.directory.resourceMap[type]!.count)
             view = outlineView.makeView(withIdentifier: tableColumn!.identifier, owner: nil) as! NSTableCellView
 			view.textField?.stringValue = type.code
-			var iconResource = document.directory.findResource(type: ResourceType("icl4"), name: type.code)
-			if iconResource == nil {
-				iconResource = document.directory.findResource(type: ResourceType("ICON"), name: type.code)
-			}
-			if iconResource == nil {
-				iconResource = document.directory.findResource(type: ResourceType("ICON"), name: "????")
-			}
-			if let iconResource = iconResource {
+			if let iconResource = icon(named: type.code) ?? icon(named: "????") {
 				iconResource.preview { img in
 					view.imageView?.image = img
 				}
