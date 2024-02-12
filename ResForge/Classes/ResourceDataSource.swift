@@ -214,9 +214,11 @@ extension ResourceDataSource: NSOutlineViewDelegate, NSOutlineViewDataSource {
         if let type = item as? ResourceType {
             let count = String(document.directory.resourceMap[type]!.count)
             view = outlineView.makeView(withIdentifier: tableColumn!.identifier, owner: nil) as! NSTableCellView
-			view.textField?.stringValue = type.code
-			if let iconResource = icon(named: type.code) ?? icon(named: "????") {
+			let typeCode = type.code
+			view.textField?.stringValue = typeCode
+			if let iconResource = icon(named: typeCode) ?? icon(named: "????") {
 				iconResource.preview { img in
+					guard view.textField?.stringValue == typeCode else { return } // Cell has already been reused? Bail!
 					view.imageView?.image = img
 				}
 			} else {
