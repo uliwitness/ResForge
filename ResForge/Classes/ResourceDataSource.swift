@@ -205,7 +205,22 @@ extension ResourceDataSource: NSOutlineViewDelegate, NSOutlineViewDataSource {
         if let type = item as? ResourceType {
             let count = String(document.directory.resourceMap[type]!.count)
             view = outlineView.makeView(withIdentifier: tableColumn!.identifier, owner: nil) as! NSTableCellView
-            view.textField?.stringValue = type.code
+			view.textField?.stringValue = type.code
+			var iconResource = document.directory.findResource(type: ResourceType("icl4"), name: type.code)
+			if iconResource == nil {
+				iconResource = document.directory.findResource(type: ResourceType("ICON"), name: type.code)
+			}
+			if iconResource == nil {
+				iconResource = document.directory.findResource(type: ResourceType("ICON"), name: "????")
+			}
+			if let iconResource = iconResource {
+				iconResource.preview { img in
+					view.imageView?.image = img
+				}
+			} else {
+				view.imageView?.image = nil
+			}
+			view.textField?.stringValue = type.code
             // Show a + indicator when the type has attributes
             (view.subviews[1] as? NSTextField)?.stringValue = type.attributes.isEmpty ? "" : "+"
             (view.subviews.last as? NSButton)?.title = count
