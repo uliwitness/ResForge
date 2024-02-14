@@ -209,6 +209,15 @@ extension ResourceDataSource: NSOutlineViewDelegate, NSOutlineViewDataSource {
 		return iconResource
 	}
 	
+	func transparentify(image: NSImage?) -> NSImage? {
+		guard let image = image else { return nil }
+		return NSImage(size: image.size, flipped: false) { box in
+			image.draw(at: .zero, from: .zero, operation: .darken, fraction: 1.0)
+			image.draw(at: .zero, from: .zero, operation: .destinationIn, fraction: 1.0)
+			return true
+		}
+	}
+	
     func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
         let view: NSTableCellView
         if let type = item as? ResourceType {
@@ -219,7 +228,7 @@ extension ResourceDataSource: NSOutlineViewDelegate, NSOutlineViewDataSource {
 			if let iconResource = icon(named: typeCode) ?? icon(named: "????") {
 				iconResource.preview { img in
 					guard view.textField?.stringValue == typeCode else { return } // Cell has already been reused? Bail!
-					view.imageView?.image = img
+					view.imageView?.image = self.transparentify(image: img)
 				}
 			} else {
 				view.imageView?.image = nil
