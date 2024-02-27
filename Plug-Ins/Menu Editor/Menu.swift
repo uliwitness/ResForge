@@ -92,4 +92,14 @@ extension Menu {
         return "\(self.className)(name = \"\(name)\", id = \(menuID)){" + items.map({ $0.description }).joined(separator: ", ") + "}"
     }
     
+    override func setNilValueForKey(_ key: String) {
+        if key == "menuID" {
+            menuID = 0
+        } else if key == "mdefID" {
+            mdefID = 0
+        } else {
+            super.setNilValueForKey(key)
+        }
+    }
+
 }

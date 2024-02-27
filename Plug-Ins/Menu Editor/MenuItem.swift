@@ -28,15 +28,11 @@ class MenuItem: NSObject {
             if iconID != 0,
                let res = manager.findResource(type: ResourceType("ICON"), id: iconID, currentDocumentOnly: false) {
                 res.preview({ img in
-                    self.willChangeValue(forKey: "iconImage")
                     self.iconImage = img
-                    self.didChangeValue(forKey: "iconImage")
                 })
                 NotificationCenter.default.post(name: MenuItem.iconDidChangeNotification, object: self) // This is *only* the change of the icon ID. Image loading isn't a change (otherwise every resource would open and immediately be edited)
             } else {
-                self.willChangeValue(forKey: "iconImage")
                 self.iconImage = nil
-                self.didChangeValue(forKey: "iconImage")
                 NotificationCenter.default.post(name: MenuItem.iconDidChangeNotification, object: self)
             }
         }
@@ -109,9 +105,7 @@ class MenuItem: NSObject {
         if iconID != 0,
            let res = manager.findResource(type: ResourceType("ICON"), id: iconID, currentDocumentOnly: false) {
             res.preview({ img in
-                self.willChangeValue(forKey: "iconImage")
                 self.iconImage = img
-                self.didChangeValue(forKey: "iconImage")
             })
         }
 
@@ -157,6 +151,18 @@ extension MenuItem {
     @objc dynamic var mdefID: Int16 { return 0 }
     
     @objc dynamic var isItem: Bool { return true }
+    
+    override func setNilValueForKey(_ key: String) {
+        if key == "submenuID" {
+            submenuID = 0
+        } else if key == "iconID" {
+            iconID = 0
+        } else if key == "menuCommand" {
+            menuCommand = 0
+        } else {
+            super.setNilValueForKey(key)
+        }
+    }
 }
 
 extension MenuItem {

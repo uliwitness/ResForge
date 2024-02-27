@@ -237,11 +237,11 @@
                             <autoresizingMask key="autoresizingMask"/>
                         </scroller>
                     </scrollView>
-                    <stackView distribution="fill" orientation="vertical" alignment="leading" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="64d-80-xuj" userLabel="Inspector Stack View">
-                        <rect key="frame" x="299" y="0.0" width="191" height="354"/>
+                    <stackView distribution="fill" orientation="vertical" alignment="leading" spacing="6" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="64d-80-xuj" userLabel="Inspector Stack View">
+                        <rect key="frame" x="299" y="0.0" width="191" height="336"/>
                         <subviews>
                             <stackView distribution="fill" orientation="horizontal" alignment="top" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="mkd-DJ-7f3" userLabel="Enabled Stack View">
-                                <rect key="frame" x="40" y="338" width="151" height="16"/>
+                                <rect key="frame" x="40" y="320" width="151" height="16"/>
                                 <subviews>
                                     <customView verticalHuggingPriority="100" id="Xpt-F5-fga">
                                         <rect key="frame" x="3" y="2" width="67" height="13"/>
@@ -268,7 +268,7 @@
                                 </customSpacing>
                             </stackView>
                             <stackView distribution="fill" orientation="horizontal" alignment="firstBaseline" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" verticalHuggingPriority="500" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="AbZ-go-Ck0" userLabel="ID Stack View">
-                                <rect key="frame" x="0.0" y="309" width="191" height="21"/>
+                                <rect key="frame" x="0.0" y="293" width="191" height="21"/>
                                 <subviews>
                                     <textField focusRingType="none" verticalHuggingPriority="800" horizontalCompressionResistancePriority="800" translatesAutoresizingMaskIntoConstraints="NO" id="1dy-JZ-eeI">
                                         <rect key="frame" x="-2" y="3" width="114" height="16"/>
@@ -290,7 +290,11 @@
                                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                         </textFieldCell>
                                         <connections>
-                                            <binding destination="-2" name="value" keyPath="selectedItem.menuID" id="vHo-o4-t9b"/>
+                                            <binding destination="-2" name="value" keyPath="selectedItem.menuID" id="XKL-Uu-VCp">
+                                                <dictionary key="options">
+                                                    <integer key="NSNullPlaceholder" value="0"/>
+                                                </dictionary>
+                                            </binding>
                                         </connections>
                                     </textField>
                                 </subviews>
@@ -310,7 +314,7 @@
                                 </connections>
                             </stackView>
                             <stackView distribution="fill" orientation="horizontal" alignment="firstBaseline" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" verticalHuggingPriority="500" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="DKS-Xg-pXR" userLabel="MDEF Stack View">
-                                <rect key="frame" x="0.0" y="280" width="191" height="21"/>
+                                <rect key="frame" x="0.0" y="266" width="191" height="21"/>
                                 <subviews>
                                     <textField focusRingType="none" verticalHuggingPriority="800" horizontalCompressionResistancePriority="800" translatesAutoresizingMaskIntoConstraints="NO" id="53h-zB-gK1">
                                         <rect key="frame" x="-2" y="3" width="114" height="16"/>
@@ -332,7 +336,11 @@
                                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                         </textFieldCell>
                                         <connections>
-                                            <binding destination="-2" name="value" keyPath="selectedItem.mdefID" id="TqQ-d9-TGh"/>
+                                            <binding destination="-2" name="value" keyPath="selectedItem.mdefID" id="Dll-oJ-GNM">
+                                                <dictionary key="options">
+                                                    <integer key="NSNullPlaceholder" value="0"/>
+                                                </dictionary>
+                                            </binding>
                                         </connections>
                                     </textField>
                                 </subviews>
@@ -349,7 +357,7 @@
                                 </connections>
                             </stackView>
                             <stackView distribution="fill" orientation="horizontal" alignment="firstBaseline" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" verticalHuggingPriority="500" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Q2b-Qp-1JV" userLabel="Style Stack View">
-                                <rect key="frame" x="0.0" y="252" width="191" height="20"/>
+                                <rect key="frame" x="0.0" y="240" width="191" height="20"/>
                                 <subviews>
                                     <textField focusRingType="none" verticalHuggingPriority="800" horizontalCompressionResistancePriority="800" translatesAutoresizingMaskIntoConstraints="NO" id="Ty4-0S-dYi">
                                         <rect key="frame" x="-2" y="3" width="114" height="16"/>
@@ -399,7 +407,7 @@
                                 </connections>
                             </stackView>
                             <stackView distribution="fill" orientation="horizontal" alignment="firstBaseline" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" verticalHuggingPriority="500" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="xuD-Ae-TIh" userLabel="Icon Stack View">
-                                <rect key="frame" x="0.0" y="223" width="191" height="21"/>
+                                <rect key="frame" x="0.0" y="213" width="191" height="21"/>
                                 <subviews>
                                     <textField focusRingType="none" verticalHuggingPriority="800" horizontalCompressionResistancePriority="800" translatesAutoresizingMaskIntoConstraints="NO" id="Ycr-zv-CON" userLabel="Icon:">
                                         <rect key="frame" x="-2" y="3" width="114" height="16"/>
@@ -421,7 +429,11 @@
                                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                         </textFieldCell>
                                         <connections>
-                                            <binding destination="-2" name="value" keyPath="selectedItem.iconID" id="5VW-9a-lOH"/>
+                                            <binding destination="-2" name="value" keyPath="selectedItem.iconID" id="zeT-aS-weY">
+                                                <dictionary key="options">
+                                                    <integer key="NSNullPlaceholder" value="0"/>
+                                                </dictionary>
+                                            </binding>
                                         </connections>
                                     </textField>
                                 </subviews>
@@ -442,7 +454,7 @@
                                 </connections>
                             </stackView>
                             <stackView distribution="fill" orientation="horizontal" alignment="firstBaseline" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" verticalHuggingPriority="500" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="IeJ-56-fjv" userLabel="Icon Type Stack View">
-                                <rect key="frame" x="0.0" y="195" width="191" height="20"/>
+                                <rect key="frame" x="0.0" y="187" width="191" height="20"/>
                                 <subviews>
                                     <textField focusRingType="none" verticalHuggingPriority="800" horizontalCompressionResistancePriority="800" translatesAutoresizingMaskIntoConstraints="NO" id="tTR-Ac-PZk">
                                         <rect key="frame" x="-2" y="3" width="114" height="16"/>
@@ -487,7 +499,7 @@
                                 </connections>
                             </stackView>
                             <stackView distribution="fill" orientation="horizontal" alignment="firstBaseline" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" verticalHuggingPriority="500" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="fce-T5-IgR" userLabel="Submenu Stack View">
-                                <rect key="frame" x="0.0" y="166" width="191" height="21"/>
+                                <rect key="frame" x="0.0" y="160" width="191" height="21"/>
                                 <subviews>
                                     <textField focusRingType="none" verticalHuggingPriority="800" horizontalCompressionResistancePriority="800" translatesAutoresizingMaskIntoConstraints="NO" id="4o3-HS-pkX" userLabel="Submenu:">
                                         <rect key="frame" x="-2" y="3" width="114" height="16"/>
@@ -509,7 +521,11 @@
                                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                         </textFieldCell>
                                         <connections>
-                                            <binding destination="-2" name="value" keyPath="selectedItem.submenuID" id="C3a-6S-dyd"/>
+                                            <binding destination="-2" name="value" keyPath="selectedItem.submenuID" id="4lJ-5g-mu3">
+                                                <dictionary key="options">
+                                                    <integer key="NSNullPlaceholder" value="0"/>
+                                                </dictionary>
+                                            </binding>
                                         </connections>
                                     </textField>
                                 </subviews>
@@ -530,7 +546,7 @@
                                 </connections>
                             </stackView>
                             <stackView distribution="fill" orientation="horizontal" alignment="firstBaseline" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" verticalHuggingPriority="500" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="eXn-jk-okw" userLabel="CMNU Command Stack View">
-                                <rect key="frame" x="0.0" y="137" width="191" height="21"/>
+                                <rect key="frame" x="0.0" y="133" width="191" height="21"/>
                                 <subviews>
                                     <textField focusRingType="none" verticalHuggingPriority="800" horizontalCompressionResistancePriority="800" translatesAutoresizingMaskIntoConstraints="NO" id="76Y-nP-lpq">
                                         <rect key="frame" x="-2" y="3" width="114" height="16"/>
@@ -577,7 +593,7 @@
                                 </connections>
                             </stackView>
                             <stackView distribution="fill" orientation="horizontal" alignment="firstBaseline" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" verticalHuggingPriority="500" detachesHiddenViews="YES" translatesAutoresizingMaskIntoConstraints="NO" id="u4U-Je-HW0" userLabel="cmnu Command Stack View">
-                                <rect key="frame" x="0.0" y="108" width="191" height="21"/>
+                                <rect key="frame" x="0.0" y="106" width="191" height="21"/>
                                 <subviews>
                                     <textField focusRingType="none" verticalHuggingPriority="800" horizontalCompressionResistancePriority="800" translatesAutoresizingMaskIntoConstraints="NO" id="4My-Se-Meq">
                                         <rect key="frame" x="-2" y="3" width="114" height="16"/>
@@ -599,7 +615,11 @@
                                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                         </textFieldCell>
                                         <connections>
-                                            <binding destination="-2" name="value" keyPath="selectedItem.menuInt16Command" id="Gfu-d9-5ul"/>
+                                            <binding destination="-2" name="value" keyPath="selectedItem.menuInt16Command" id="x1y-94-9ng">
+                                                <dictionary key="options">
+                                                    <integer key="NSNullPlaceholder" value="0"/>
+                                                </dictionary>
+                                            </binding>
                                         </connections>
                                     </textField>
                                 </subviews>
