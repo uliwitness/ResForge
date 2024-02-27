@@ -4,10 +4,10 @@ class Menu: NSObject {
     static let nameDidChangeNotification = Notification.Name("MENUNameDidChangeNotification")
     static let enabledDidChangeNotification = Notification.Name("MENUEnabledDidChangeNotification")
 
-    var menuID: Int16 = 128
-    var mdefID: Int16 = 0
+    @objc dynamic var menuID: Int16 = 128
+    @objc dynamic var mdefID: Int16 = 0
     var enableFlags: UInt32 = UInt32.max
-    var isEnabled: Bool {
+    @objc dynamic var isEnabled: Bool {
         set(newValue) {
             setEnabled(newValue, at: -1)
             NotificationCenter.default.post(name: Menu.nameDidChangeNotification, object: self)
@@ -16,7 +16,7 @@ class Menu: NSObject {
             return isEnabled(at: -1)
         }
     }
-    var name = "New Menu" {
+    @objc dynamic var name = "New Menu" {
         didSet {
             NotificationCenter.default.post(name: Menu.nameDidChangeNotification, object: self)
         }
@@ -52,7 +52,7 @@ class Menu: NSObject {
 
 // So Key-value-coding from an NSTableView can treat the menu (title) object same as any item.
 extension Menu {
-    var keyEquivalent: String {
+    @objc dynamic var keyEquivalent: String {
         get {
             return ""
         }
@@ -60,7 +60,7 @@ extension Menu {
             
         }
     }
-    var markCharacter: String {
+    @objc dynamic var markCharacter: String {
         get {
             return ""
         }
@@ -69,76 +69,23 @@ extension Menu {
         }
     }
     
-    var hasKeyEquivalent: Bool {
+    @objc dynamic var hasKeyEquivalent: Bool {
         return false
     }
-    var menuCommand: UInt32 { return 0 }
-    var styleByte: UInt8 { return 0 }
-    var iconID: Int { return 0 }
-    var iconImage: NSImage? { return nil }
-    var submenuID: Int { return 0 }
+    @objc dynamic var menuInt16Command: UInt16 { return 0 }
+    @objc dynamic var menu4CCCommand: String { "" }
+    @objc dynamic var styleByte: UInt8 { return 0 }
+    @objc dynamic var iconID: Int { return 0 }
+    @objc dynamic var iconImage: NSImage? { return nil }
+    @objc dynamic var submenuID: Int { return 0 }
 
-    var isItem: Bool { return false }
-    var has4CCCommand: Bool { return false }
-    var hasInt16Command: Bool { return false }
-    var iconType: UInt8 { return 0 }
-
-    override func value(forKey key: String) -> Any? {
-        if key == "markCharacter" {
-            return markCharacter
-        } else if key == "keyEquivalent" {
-            return keyEquivalent
-        } else if key == "name" {
-            return name
-        } else if key == "hasKeyEquivalent" {
-            return hasKeyEquivalent
-        } else if key == "isEnabled" {
-            return isEnabled
-        } else if key == "menuID" {
-            return menuID
-        } else if key == "mdefID" {
-            return mdefID
-        } else if key == "menuCommand" {
-            return menuCommand
-        } else if key == "styleByte" {
-            return styleByte
-        } else if key == "iconID" {
-            return iconID
-        } else if key == "iconImage" {
-            return iconImage
-        } else if key == "iconType" {
-            return iconType
-        } else if key == "submenuID" {
-            return submenuID
-        } else if key == "has4CCCommand" {
-            return has4CCCommand
-        } else if key == "hasInt16Command" {
-            return hasInt16Command
-        } else if key == "isItem" {
-            return isItem
-        } else if key == "textColor" {
-            return isEnabled ? NSColor.textBackgroundColor : NSColor.systemGray
-        } else {
-            return super.value(forKey: key)
-        }
-    }
+    @objc dynamic var isItem: Bool { return false }
+    @objc dynamic var has4CCCommand: Bool { return false }
+    @objc dynamic var hasInt16Command: Bool { return false }
+    @objc dynamic var iconType: UInt8 { return 0 }
     
-    override func setValue(_ value: Any?, forKey key: String) {
-        if key == "markCharacter" {
-            markCharacter = value as? String ?? ""
-        } else if key == "keyEquivalent" {
-            keyEquivalent = value as? String ?? ""
-        } else if key == "name" {
-            name = value as? String ?? ""
-        } else if key == "isEnabled" {
-            isEnabled = value as? Bool ?? true
-        } else if key == "mdefID" {
-            mdefID = Int16(value as? Int ?? 0)
-        } else if key == "menuID" {
-            menuID = Int16(value as? Int ?? 0)
-        } else {
-            super.setValue(value, forKey: key)
-        }
+    @objc dynamic var textColor: NSColor {
+        isEnabled ? NSColor.textBackgroundColor : NSColor.systemGray
     }
     
     override var description: String {

@@ -18,12 +18,12 @@ class MenuItem: NSObject {
     static let iconDidChangeNotification = Notification.Name("MENUItemIconDidChangeNotification")
     static let submenuIDDidChangeNotification = Notification.Name("MENUItemSubmenuIDDidChangeNotification")
 
-    var name = "" {
+    @objc dynamic var name = "" {
         didSet {
             NotificationCenter.default.post(name: MenuItem.nameDidChangeNotification, object: self)
         }
     }
-    var iconID = Int(0) {
+    @objc dynamic var iconID = Int(0) {
         didSet {
             if iconID != 0,
                let res = manager.findResource(type: ResourceType("ICON"), id: iconID, currentDocumentOnly: false) {
@@ -41,51 +41,51 @@ class MenuItem: NSObject {
             }
         }
     }
-    var submenuID = Int(0) {
+    @objc dynamic var submenuID = Int(0) {
         didSet {
             NotificationCenter.default.post(name: MenuItem.submenuIDDidChangeNotification, object: self)
         }
     }
-    var keyEquivalent = "" {
+    @objc dynamic var keyEquivalent = "" {
         didSet {
             NotificationCenter.default.post(name: MenuItem.keyEquivalentDidChangeNotification, object: self)
         }
     }
-    var markCharacter = "" {
+    @objc dynamic var markCharacter = "" {
         didSet {
             NotificationCenter.default.post(name: MenuItem.markCharacterDidChangeNotification, object: self)
         }
     }
-    var styleByte = UInt8(0) {
+    @objc dynamic var styleByte = UInt8(0) {
         didSet {
             NotificationCenter.default.post(name: MenuItem.styleByteDidChangeNotification, object: self)
         }
     }
-    var menuCommand = UInt32(0) {
+    @objc dynamic var menuCommand = UInt32(0) {
         didSet {
             NotificationCenter.default.post(name: MenuItem.menuCommandDidChangeNotification, object: self)
         }
     }
     let commandsSize: CommandsSize
     
-    var isEnabled: Bool = true {
+    @objc dynamic var isEnabled: Bool = true {
         didSet {
             NotificationCenter.default.post(name: MenuItem.enabledDidChangeNotification, object: self)
         }
     }
     
-    var iconImage: NSImage?
-    var iconType: UInt8
+    @objc dynamic var iconImage: NSImage?
+    @objc dynamic var iconType: UInt8
 
-    var hasKeyEquivalent: Bool {
+    @objc dynamic var hasKeyEquivalent: Bool {
         return !keyEquivalent.isEmpty
     }
     
-    var has4CCCommand: Bool {
+    @objc dynamic var has4CCCommand: Bool {
         return commandsSize == .int32
     }
 
-    var hasInt16Command: Bool {
+    @objc dynamic var hasInt16Command: Bool {
         return commandsSize == .int16
     }
 
@@ -117,90 +117,46 @@ class MenuItem: NSObject {
 
     }
     
-}
-
-extension MenuItem {
-    
-    override func value(forKey key: String) -> Any? {
-        if key == "markCharacter" {
-            return markCharacter
-        } else if key == "keyEquivalent" {
-            return keyEquivalent
-        } else if key == "name" {
-            return name
-        } else if key == "menuID" {
-            return menuID
-        } else if key == "mdefID" {
-            return mdefID
-        } else if key == "menuCommand" {
+    @objc dynamic var menu4CCCommand: String {
+        set {
+            if commandsSize == .int32 {
+                menuCommand = UInt32(fourCharString: newValue)
+            }
+        }
+        get {
             if commandsSize == .int32 {
                 return menuCommand.fourCharString
             } else {
-                return "\(menuCommand)"
+                return ""
             }
-        } else if key == "styleByte" {
-            return styleByte
-        } else if key == "iconType" {
-            return iconType
-        } else if key == "isEnabled" {
-            return isEnabled
-        } else if key == "iconID" {
-            return "\(iconID)"
-        } else if key == "submenuID" {
-            return "\(submenuID)"
-        } else if key == "iconImage" {
-            return iconImage
-        } else if key == "isItem" {
-            return isItem
-        } else if key == "has4CCCommand" {
-            return has4CCCommand
-        } else if key == "hasInt16Command" {
-            return hasInt16Command
-        } else if key == "textColor" {
-            return isEnabled ? NSColor.textColor : NSColor.disabledControlTextColor
-        } else if key == "hasKeyEquivalent" {
-            return hasKeyEquivalent
-        } else {
-            return super.value(forKey: key)
         }
     }
-    
-    override func setValue(_ value: Any?, forKey key: String) {
-        if key == "markCharacter" {
-            markCharacter = value as? String ?? ""
-        } else if key == "keyEquivalent" {
-            keyEquivalent = value as? String ?? ""
-        } else if key == "name" {
-            name = value as? String ?? ""
-        } else if key == "isEnabled" {
-            isEnabled = value as? Bool ?? true
-        } else if key == "iconID" {
-            iconID = value as? Int ?? 0
-        } else if key == "submenuID" {
-            submenuID = value as? Int ?? 0
-        } else if key == "menuCommand" {
-            if commandsSize == .int32 {
-                menuCommand = UInt32(fourCharString: value as? String ?? "")
+    @objc dynamic var menuInt16Command: UInt16 {
+        set {
+            if commandsSize == .int16 {
+                menuCommand = UInt32(newValue)
+            }
+        }
+        get {
+            if commandsSize == .int16 {
+                return UInt16(menuCommand)
             } else {
-                menuCommand = value as? UInt32 ?? 0
+                return 0
             }
-        } else if key == "styleByte" {
-            styleByte = value as? UInt8 ?? 0
-        } else if key == "iconType" {
-            iconType = value as? UInt8 ?? 0
-        } else {
-            super.setValue(value, forKey: key)
         }
     }
     
+    @objc dynamic var textColor: NSColor {
+        isEnabled ? NSColor.textColor : NSColor.disabledControlTextColor
+    }
 }
 
 // So menu and menu item can be treated identically by UI.
 extension MenuItem {
-    var menuID: Int16 { return 0 }
-    var mdefID: Int16 { return 0 }
+    @objc dynamic var menuID: Int16 { return 0 }
+    @objc dynamic var mdefID: Int16 { return 0 }
     
-    var isItem: Bool { return true }
+    @objc dynamic var isItem: Bool { return true }
 }
 
 extension MenuItem {

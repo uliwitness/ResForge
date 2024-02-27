@@ -556,7 +556,7 @@
                                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                         </textFieldCell>
                                         <connections>
-                                            <binding destination="-2" name="value" keyPath="selectedItem.menuCommand" id="QpS-mT-kXL"/>
+                                            <binding destination="-2" name="value" keyPath="selectedItem.menu4CCCommand" id="FVO-EG-8Je"/>
                                         </connections>
                                     </textField>
                                 </subviews>
@@ -599,7 +599,7 @@
                                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                         </textFieldCell>
                                         <connections>
-                                            <binding destination="-2" name="value" keyPath="selectedItem.menuCommand" id="WYa-KH-JRe"/>
+                                            <binding destination="-2" name="value" keyPath="selectedItem.menuInt16Command" id="Gfu-d9-5ul"/>
                                         </connections>
                                     </textField>
                                 </subviews>
