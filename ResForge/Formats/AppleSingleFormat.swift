@@ -40,7 +40,7 @@ class AppleSingleFormat: ClassicFormat {
             let length = Int(try reader.read() as UInt32)
 
             // Read the entry data
-            try reader.pushPosition(offset)
+            try reader.pushOldPositionAndSet(offset)
             let entry = try reader.readData(length: length)
             if entryID != Self.resourceForkID {
                 entries.append((entryID, entry))

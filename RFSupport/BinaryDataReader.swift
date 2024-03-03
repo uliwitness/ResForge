@@ -48,9 +48,13 @@ public class BinaryDataReader {
         self.position = position
     }
 
-    public func pushPosition(_ position: Int) throws {
+    public func pushOldPositionAndSet(_ position: Int) throws {
         posStack.append(self.position)
         try self.setPosition(position)
+    }
+
+    public func pushPosition() {
+        posStack.append(self.position)
     }
 
     public func popPosition() {

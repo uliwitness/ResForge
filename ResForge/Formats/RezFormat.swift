@@ -58,7 +58,7 @@ struct RezFormat: ResourceFileFormat {
             let resourceType = ResourceType(type)
 
             // Read resources
-            try reader.pushPosition(resourceListOffset)
+            try reader.pushOldPositionAndSet(resourceListOffset)
             var resources: [Resource] = []
             for _ in 0..<numResources {
                 let index = Int(try reader.read() as UInt32) - baseIndex

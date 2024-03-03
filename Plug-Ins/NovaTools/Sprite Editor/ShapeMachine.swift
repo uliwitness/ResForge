@@ -51,7 +51,7 @@ final class ShapeMachine: Sprite {
     }
 
     private func readShape() throws -> Shape {
-        try reader.pushPosition(Int(try reader.read() as UInt32))
+        try reader.pushOldPositionAndSet(Int(try reader.read() as UInt32))
         let shape = try Shape(reader: reader)
         reader.popPosition()
         // Update our max size as necessary

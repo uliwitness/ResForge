@@ -186,6 +186,10 @@
 		49F570062A845D5E00953A17 /* RezFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F570052A845D5E00953A17 /* RezFormat.swift */; };
 		49F6A2EE24A03C5E0086C0F4 /* OSStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F6A2ED24A03C5E0086C0F4 /* OSStatus.swift */; };
 		49F6C76324C579820078EB55 /* PrefsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F6C76024C577430078EB55 /* PrefsController.swift */; };
+		550436392B94E45F00E6315F /* RFSupport.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49AACD7B24CE931A0081DD4A /* RFSupport.framework */; };
+		550436462B94E4E500E6315F /* TextEditorWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 550436422B94E4E500E6315F /* TextEditorWindow.xib */; };
+		550436472B94E4E500E6315F /* TextEditorWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550436442B94E4E500E6315F /* TextEditorWindowController.swift */; };
+		550436492B94E88A00E6315F /* TEXT Editor.plugin in Copy Plugins */ = {isa = PBXBuildFile; fileRef = 5504363F2B94E45F00E6315F /* TEXT Editor.plugin */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5504F7462B7A7E4E0096F16A /* DITLItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5504F7452B7A7E4E0096F16A /* DITLItem.swift */; };
 		5504F7482B7A7EB20096F16A /* DITLItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5504F7472B7A7EB20096F16A /* DITLItemView.swift */; };
 		5504F74A2B7A7EEC0096F16A /* DITLDocumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5504F7492B7A7EEC0096F16A /* DITLDocumentView.swift */; };
@@ -338,6 +342,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				550436492B94E88A00E6315F /* TEXT Editor.plugin in Copy Plugins */,
 				55FB361F2B715A3F000F1528 /* Dialog Editor.plugin in Copy Plugins */,
 				49DA3A572550BD9000821A7E /* NovaTools.plugin in Copy Plugins */,
 				4953F5A6248875D10002340F /* Sound Editor.plugin in Copy Plugins */,
@@ -561,6 +566,10 @@
 		49F6A2ED24A03C5E0086C0F4 /* OSStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSStatus.swift; sourceTree = "<group>"; usesTabs = 0; };
 		49F6C76024C577430078EB55 /* PrefsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrefsController.swift; sourceTree = "<group>"; usesTabs = 0; };
 		49F6C76124C577440078EB55 /* ApplicationDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationDelegate.swift; sourceTree = "<group>"; usesTabs = 0; };
+		5504363F2B94E45F00E6315F /* TEXT Editor.plugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "TEXT Editor.plugin"; sourceTree = BUILT_PRODUCTS_DIR; };
+		550436432B94E4E500E6315F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/TextEditorWindow.xib; sourceTree = "<group>"; };
+		550436442B94E4E500E6315F /* TextEditorWindowController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextEditorWindowController.swift; sourceTree = "<group>"; };
+		550436452B94E4E500E6315F /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5504F7452B7A7E4E0096F16A /* DITLItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DITLItem.swift; sourceTree = "<group>"; usesTabs = 0; };
 		5504F7472B7A7EB20096F16A /* DITLItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DITLItemView.swift; sourceTree = "<group>"; usesTabs = 0; };
 		5504F7492B7A7EEC0096F16A /* DITLDocumentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DITLDocumentView.swift; sourceTree = "<group>"; usesTabs = 0; };
@@ -616,6 +625,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				49DA3A4D2550BD2E00821A7E /* RFSupport.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		550436382B94E45F00E6315F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				550436392B94E45F00E6315F /* RFSupport.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1037,6 +1054,16 @@
 			path = Formats;
 			sourceTree = "<group>";
 		};
+		550436412B94E4E500E6315F /* Text Editor */ = {
+			isa = PBXGroup;
+			children = (
+				550436422B94E4E500E6315F /* TextEditorWindow.xib */,
+				550436442B94E4E500E6315F /* TextEditorWindowController.swift */,
+				550436452B94E4E500E6315F /* Info.plist */,
+			);
+			path = "Text Editor";
+			sourceTree = "<group>";
+		};
 		554125B92B803911008B6832 /* Menu Editor */ = {
 			isa = PBXGroup;
 			children = (
@@ -1091,6 +1118,7 @@
 				4953F58F248873DD0002340F /* Sound Editor */,
 				55FB36162B715497000F1528 /* Dialog Editor */,
 				554125B92B803911008B6832 /* Menu Editor */,
+				550436412B94E4E500E6315F /* Text Editor */,
 			);
 			path = "Plug-Ins";
 			sourceTree = "<group>";
@@ -1122,6 +1150,7 @@
 				49EE72D82550B79600BEABDB /* NovaTools.plugin */,
 				55FB360D2B71530C000F1528 /* Dialog Editor.plugin */,
 				554125B72B8037E4008B6832 /* Menu Editor.plugin */,
+				5504363F2B94E45F00E6315F /* TEXT Editor.plugin */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -1247,6 +1276,23 @@
 			name = NovaTools;
 			productName = NovaTools;
 			productReference = 49EE72D82550B79600BEABDB /* NovaTools.plugin */;
+			productType = "com.apple.product-type.bundle";
+		};
+		550436322B94E45F00E6315F /* TEXT Editor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5504363C2B94E45F00E6315F /* Build configuration list for PBXNativeTarget "TEXT Editor" */;
+			buildPhases = (
+				550436332B94E45F00E6315F /* Sources */,
+				550436382B94E45F00E6315F /* Frameworks */,
+				5504363A2B94E45F00E6315F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "TEXT Editor";
+			productName = MenuEditor;
+			productReference = 5504363F2B94E45F00E6315F /* TEXT Editor.plugin */;
 			productType = "com.apple.product-type.bundle";
 		};
 		554125A82B8037E4008B6832 /* Menu Editor */ = {
@@ -1413,6 +1459,7 @@
 				49EE72D72550B79600BEABDB /* NovaTools */,
 				55FB35EC2B71530C000F1528 /* Dialog Editor */,
 				554125A82B8037E4008B6832 /* Menu Editor */,
+				550436322B94E45F00E6315F /* TEXT Editor */,
 				49AACD7A24CE931A0081DD4A /* RFSupport */,
 			);
 		};
@@ -1494,6 +1541,14 @@
 				49EE73012550B99200BEABDB /* SpriteWindow.xib in Resources */,
 				496E7E3C25E6EA17001C97CA /* ShanWindow.xib in Resources */,
 				4976D28E2718CEA100322DDF /* GalaxyWindow.xib in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5504363A2B94E45F00E6315F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				550436462B94E4E500E6315F /* TextEditorWindow.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1627,6 +1682,14 @@
 				49640F2B25F201B8009FEC9B /* LightLayer.swift in Sources */,
 				49640F3225F201BA009FEC9B /* WeaponLayer.swift in Sources */,
 				4976D2992718CEA400322DDF /* GalaxyView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		550436332B94E45F00E6315F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				550436472B94E4E500E6315F /* TextEditorWindowController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1840,6 +1903,14 @@
 				49EE72AD2550A7F300BEABDB /* Base */,
 			);
 			name = SpriteWindow.xib;
+			sourceTree = "<group>";
+		};
+		550436422B94E4E500E6315F /* TextEditorWindow.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				550436432B94E4E500E6315F /* Base */,
+			);
+			name = TextEditorWindow.xib;
 			sourceTree = "<group>";
 		};
 		554125BD2B803911008B6832 /* MenuEditorWindow.xib */ = {
@@ -2079,6 +2150,28 @@
 				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_FILE = "Plug-Ins/NovaTools/Info.plist";
 				PRODUCT_BUNDLE_IDENTIFIER = com.resforge.NovaTools;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = plugin;
+			};
+			name = Release;
+		};
+		5504363D2B94E45F00E6315F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_FILE = "Plug-Ins/Text Editor/Info.plist";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.resforge.Text-Editor";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = plugin;
+			};
+			name = Debug;
+		};
+		5504363E2B94E45F00E6315F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_FILE = "Plug-Ins/Text Editor/Info.plist";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.resforge.Text-Editor";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = plugin;
 			};
@@ -2344,6 +2437,15 @@
 			buildConfigurations = (
 				49EE72DC2550B79600BEABDB /* Debug */,
 				49EE72DD2550B79600BEABDB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5504363C2B94E45F00E6315F /* Build configuration list for PBXNativeTarget "TEXT Editor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5504363D2B94E45F00E6315F /* Debug */,
+				5504363E2B94E45F00E6315F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

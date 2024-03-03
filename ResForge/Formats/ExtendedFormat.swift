@@ -70,7 +70,7 @@ struct ExtendedFormat: ResourceFileFormat {
             // Read attributes
             var attributes: [String: String] = [:]
             if numAttributes > 0 {
-                try reader.pushPosition(attributesOffset)
+                try reader.pushOldPositionAndSet(attributesOffset)
                 for _ in 0..<numAttributes {
                     let key = try reader.readCString(encoding: .macOSRoman)
                     attributes[key] = try reader.readCString(encoding: .macOSRoman)
@@ -81,7 +81,7 @@ struct ExtendedFormat: ResourceFileFormat {
             let resourceType = ResourceType(type, attributes)
 
             // Read resources
-            try reader.pushPosition(resourceListOffset)
+            try reader.pushOldPositionAndSet(resourceListOffset)
             var resources: [Resource] = []
             for _ in 0..<numResources {
                 let id = Int(try reader.read() as Int64)
