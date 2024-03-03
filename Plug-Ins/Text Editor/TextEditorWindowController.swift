@@ -118,10 +118,8 @@ class TextEditorWindowController: AbstractEditor, ResourceEditor {
                         if NSFontManager.shared.traits(of: newFont).contains(.italicFontMask) {
                             font = newFont
                         } else {
-                            let descriptor = CTFontCopyFontDescriptor(font as CTFont)
-                            print("descr = \(descriptor)")
-                            let obliqueTransform = CGAffineTransform(1, tan(Angle(degrees: 0.0).radians), tan(Angle(degrees: 20.0).radians), 1, 0, 0)
-                            font = CTFont(descriptor, transform: obliqueTransform)
+                            let obliqueTransform = AffineTransform(m11: 1, m12: tan(Angle(degrees: 0.0).radians), m21: tan(Angle(degrees: 20.0).radians), m22: 1, tX: 0, tY: 0)
+                            font = NSFont(descriptor: font.fontDescriptor, textTransform: obliqueTransform) ?? font
                         }
                     }
                     if characterStyle.contains(.underline) {
