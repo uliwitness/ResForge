@@ -15,6 +15,7 @@ struct Picture {
     private var penPos: QDPoint
     private var lastRect: QDRect
     private var roundRectCornerSize: QDPoint
+    private var penSize: QDPoint
 
     var imageRep: NSBitmapImageRep
     var format: ImageFormat = .unknown
@@ -54,6 +55,7 @@ extension Picture {
         penPos = QDPoint(x: 0, y: 0)
         lastRect = QDRect(top: 0, left: 0, bottom: 0, right: 0)
         roundRectCornerSize = QDPoint(x: 8, y: 8)
+        penSize = QDPoint(x: 1, y: 1)
         imageRep = ImageFormat.rgbaRep(width: frame.width, height: frame.height)
         if readOps {
             try self.readOps(reader)
@@ -76,6 +78,22 @@ extension Picture {
         }
     }
 
+    enum ShapeMode {
+        case stroke
+        case fill
+    }
+    
+    private func flipped(point: QDPoint) -> CGPoint {
+        return CGPoint(x: point.x, y: frame.bottom - point.y - frame.top)
+    }
+    
+    private func flipped(rect: QDRect, for shapeMode: ShapeMode) -> CGRect {
+        let sizeInset = (shapeMode == .stroke) ? CGFloat(max(penSize.x, penSize.y)) : 0.0
+        let lineInset = (shapeMode == .stroke) ? CGFloat(sizeInset / 2.0) : 0.0
+        return CGRect(origin: CGPoint(x: CGFloat(rect.left) + lineInset, y: CGFloat(frame.bottom - rect.bottom - frame.top) + lineInset),
+                      size: CGSize(width: CGFloat(rect.right - rect.left) - sizeInset, height: CGFloat(rect.bottom - rect.top) - sizeInset))
+    }
+    
     private mutating func readOps(_ reader: BinaryDataReader) throws {
         let readOp = v1 ? PictOpcode.read1 : PictOpcode.read2
         var bitmapInfo: UInt32 = 0
@@ -142,33 +160,27 @@ extension Picture {
             case .nop, .hiliteMode, .defHilite:
                 continue
             case .frameSameRect:
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
-                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                let cgBox = flipped(rect: lastRect, for: .stroke)
                 ctx.addRect(cgBox)
                 ctx.strokePath()
             case .paintSameRect, .eraseSameRect, .invertSameRect, .fillSameRect:
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
-                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                let cgBox = flipped(rect: lastRect, for: .fill)
                 ctx.addRect(cgBox)
                 ctx.fillPath()
             case .frameSameOval:
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
-                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                let cgBox = flipped(rect: lastRect, for: .stroke)
                 ctx.addEllipse(in: cgBox)
                 ctx.strokePath()
             case .paintSameOval, .eraseSameOval, .invertSameOval, .fillSameOval:
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
-                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                let cgBox = flipped(rect: lastRect, for: .fill)
                 ctx.addEllipse(in: cgBox)
                 ctx.fillPath()
             case .frameSameRoundRect:
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
-                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                let cgBox = flipped(rect: lastRect, for: .stroke)
                 ctx.addRect(cgBox)
                 ctx.strokePath()
             case .paintSameRoundRect, .eraseSameRoundRect, .invertSameRoundRect, .fillSameRoundRect:
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
-                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                let cgBox = flipped(rect: lastRect, for: .fill)
                 ctx.addRect(cgBox)
                 ctx.fillPath()
             case .penMode:
@@ -176,29 +188,29 @@ extension Picture {
             case .shortLineFrom:
                 let dh: Int8 = try reader.read(bigEndian: true)
                 let dv: Int8 = try reader.read(bigEndian: true)
-                let ep = CGPoint(x: CGFloat(penPos.x + Int(dh)), y: CGFloat(penPos.y + Int(dv)))
+                let ep = flipped(point: QDPoint(x: penPos.x + Int(dh), y: penPos.y + Int(dv)))
                 ctx.addLine(to: ep)
                 ctx.strokePath()
                 penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
             case .shortComment:
                 try reader.advance(2)
             case .penSize:
-                let s = try QDPoint(reader)
-                ctx.setLineWidth(CGFloat(max(s.x, s.y)))
+                penSize = try QDPoint(reader)
+                ctx.setLineWidth(CGFloat(max(penSize.x, penSize.y)))
             case .lineFrom:
                 let dh: Int16 = try reader.read(bigEndian: true)
                 let dv: Int16 = try reader.read(bigEndian: true)
-                let ep = CGPoint(x: CGFloat(penPos.x + Int(dh)), y: CGFloat(penPos.y + Int(dv)))
+                let ep = flipped(point: QDPoint(x: penPos.x + Int(dh), y: penPos.y + Int(dv)))
                 ctx.addLine(to: ep)
                 ctx.strokePath()
                 penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
             case .shortLine:
-                let sh: Int16 = try reader.read(bigEndian: true)
-                let sv: Int16 = try reader.read(bigEndian: true)
-                let sp = CGPoint(x: CGFloat(sh), y: CGFloat(sv))
-                let eh: Int8 = try reader.read(bigEndian: true)
-                let ev: Int8 = try reader.read(bigEndian: true)
-                let ep = CGPoint(x: sp.x + CGFloat(eh), y: sp.y + CGFloat(ev))
+                let sh = Int(try reader.read(bigEndian: true) as Int16)
+                let sv = Int(try reader.read(bigEndian: true) as Int16)
+                let sp = flipped(point: QDPoint(x: sh, y: sv))
+                let eh = Int(try reader.read(bigEndian: true) as Int8)
+                let ev = Int(try reader.read(bigEndian: true) as Int8)
+                let ep = flipped(point: QDPoint(x: sh + eh, y: sv + ev))
                 penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
                 ctx.move(to: sp)
                 ctx.addLine(to: ep)
@@ -213,10 +225,9 @@ extension Picture {
             case .hiliteColor, .opColor:
                 try reader.advance(6)
             case .line:
-                let s = try QDPoint(reader)
-                let sp = CGPoint(x: CGFloat(s.x), y: CGFloat(s.y))
-                var e = try QDPoint(reader)
-                let ep = CGPoint(x: CGFloat(e.x), y: CGFloat(e.y))
+                let sp = flipped(point: try QDPoint(reader))
+                let e = try QDPoint(reader)
+                let ep = flipped(point: e)
                 penPos = e
                 ctx.move(to: sp)
                 ctx.addLine(to: ep)
@@ -225,43 +236,37 @@ extension Picture {
                 try reader.advance(8)
             case .frameRect:
                 let box = try QDRect(reader)
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
-                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                let cgBox = flipped(rect: box, for: .stroke)
                 ctx.addRect(cgBox)
                 ctx.strokePath()
                 lastRect = box
             case .paintRect, .eraseRect, .invertRect, .fillRect:
                 let box = try QDRect(reader)
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
-                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                let cgBox = flipped(rect: box, for: .fill)
                 ctx.addRect(cgBox)
                 ctx.fillPath()
                 lastRect = box
             case .frameOval:
                 let box = try QDRect(reader)
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
-                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                let cgBox = flipped(rect: box, for: .stroke)
                 ctx.addEllipse(in: cgBox)
                 ctx.strokePath()
                 lastRect = box
             case .paintOval, .eraseOval, .invertOval, .fillOval:
                 let box = try QDRect(reader)
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
-                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                let cgBox = flipped(rect: box, for: .fill)
                 ctx.addEllipse(in: cgBox)
                 ctx.fillPath()
                 lastRect = box
             case .frameRoundRect:
                 let box = try QDRect(reader)
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
-                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                let cgBox = flipped(rect: box, for: .stroke)
                 ctx.addRect(cgBox)
                 ctx.strokePath()
                 lastRect = box
             case .paintRoundRect, .eraseRoundRect, .invertRoundRect, .fillRoundRect:
                 let box = try QDRect(reader)
-                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
-                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                let cgBox = flipped(rect: box, for: .fill)
                 ctx.addRect(cgBox)
                 ctx.fillPath()
                 lastRect = box
@@ -427,6 +432,7 @@ extension Picture {
         penPos = QDPoint(x: 0, y: 0)
         lastRect = QDRect(top: 0, left: 0, bottom: 0, right: 0)
         roundRectCornerSize = QDPoint(x: 8, y: 8)
+        penSize = QDPoint(x: 1, y: 1)
     }
 
     static func data(from rep: NSBitmapImageRep, format: inout ImageFormat) throws -> Data {
