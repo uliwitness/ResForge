@@ -149,6 +149,7 @@ extension Picture {
                 let dv: Int8 = try reader.read(bigEndian: true)
                 let ep = CGPoint(x: CGFloat(penPos.x + Int(dh)), y: CGFloat(penPos.y + Int(dv)))
                 ctx.addLine(to: ep)
+                ctx.strokePath()
                 penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
             case .shortComment:
                 try reader.advance(2)
@@ -159,6 +160,7 @@ extension Picture {
                 let dv: Int16 = try reader.read(bigEndian: true)
                 let ep = CGPoint(x: CGFloat(penPos.x + Int(dh)), y: CGFloat(penPos.y + Int(dv)))
                 ctx.addLine(to: ep)
+                ctx.strokePath()
                 penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
             case .shortLine:
                 let sh: Int16 = try reader.read(bigEndian: true)
@@ -170,25 +172,63 @@ extension Picture {
                 penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
                 ctx.move(to: sp)
                 ctx.addLine(to: CGPoint(x: CGFloat(dh), y: CGFloat(dv)))
-            case .rgbFgColor, .rgbBkCcolor, .hiliteColor, .opColor:
+                ctx.strokePath()
+            case .rgbFgColor, .rgbBkCcolor:
+                let red = try reader.read() as UInt16
+                let green = try reader.read() as UInt16
+                let blue = try reader.read() as UInt16
+                let cgCol = CGColor(red: CGFloat(red) / 65535.0, green: CGFloat(green) / 65535.0, blue: CGFloat(blue) / 65535.0, alpha: 1.0)
+                ctx.setStrokeColor(cgCol)
+                ctx.setFillColor(cgCol)
+            case .hiliteColor, .opColor:
                 try reader.advance(6)
             case .line:
-                let sh: Int16 = try reader.read(bigEndian: true)
-                let sv: Int16 = try reader.read(bigEndian: true)
-                let sp = CGPoint(x: CGFloat(sh), y: CGFloat(sv))
-                let dh: Int16 = try reader.read(bigEndian: true)
-                let dv: Int16 = try reader.read(bigEndian: true)
-                let ep = CGPoint(x: sp.x + CGFloat(sh), y: sp.y + CGFloat(sv))
-                penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
+                let s = try QDPoint(reader)
+                let sp = CGPoint(x: CGFloat(s.x), y: CGFloat(s.y))
+                let e = try QDPoint(reader)
+                let ep = CGPoint(x: CGFloat(e.x), y: CGFloat(e.y))
+                penPos = e
                 ctx.move(to: sp)
-                ctx.addLine(to: CGPoint(x: CGFloat(dh), y: CGFloat(dv)))
-            case .penPattern, .fillPattern,
-                    .frameRect, .paintRect, .eraseRect, .invertRect, .fillRect:
+                ctx.addLine(to: ep)
+                ctx.strokePath()
+            case .penPattern, .fillPattern:
                 try reader.advance(8)
-            case .frameOval, .paintOval, .eraseOval, .invertOval, .fillOval:
-                try reader.advance(8)
-            case .frameRoundRect, .paintRoundRect, .eraseRoundRect, .invertRoundRect, .fillRoundRect:
-                try reader.advance(8)
+            case .frameRect:
+                let box = try QDRect(reader)
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
+                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                ctx.addRect(cgBox)
+                ctx.strokePath()
+            case .paintRect, .eraseRect, .invertRect, .fillRect:
+                let box = try QDRect(reader)
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
+                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                ctx.addRect(cgBox)
+                ctx.fillPath()
+            case .frameOval:
+                let box = try QDRect(reader)
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
+                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                ctx.addEllipse(in: cgBox)
+                ctx.strokePath()
+            case .paintOval, .eraseOval, .invertOval, .fillOval:
+                let box = try QDRect(reader)
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
+                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                ctx.addEllipse(in: cgBox)
+                ctx.fillPath()
+            case .frameRoundRect:
+                let box = try QDRect(reader)
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
+                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                ctx.addRect(cgBox)
+                ctx.strokePath()
+            case .paintRoundRect, .eraseRoundRect, .invertRoundRect, .fillRoundRect:
+                let box = try QDRect(reader)
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
+                                   size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
+                ctx.addRect(cgBox)
+                ctx.fillPath()
             case .frameRegion, .paintRegion, .eraseRegion, .invertRegion, .fillRegion:
                 try self.skipRegion(reader)
             case .longComment:
