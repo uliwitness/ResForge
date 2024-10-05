@@ -64,7 +64,7 @@ struct ColorTable {
         default:
             // We don't have access to the EditorManager here so we can't lookup currently loaded clut resources
             // (In practice this is unlikely to be needed)
-            throw ImageReaderError.unsupported
+            throw ImageReaderError.unsupportedFormat
         }
     }
 }

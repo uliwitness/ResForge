@@ -126,7 +126,8 @@ extension ImageFormat {
 
 enum ImageReaderError: Error {
     case invalid
-    case unsupported
+    case unsupported(opcode: UInt16)
+    case unsupportedFormat
 }
 
 enum ImageWriterError: LocalizedError {

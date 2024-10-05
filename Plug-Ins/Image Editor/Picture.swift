@@ -10,7 +10,10 @@ struct Picture {
     private var v1: Bool
     private var frame: QDRect
     private var clipRect: QDRect
+    private var clipPath: NSBezierPath?
     private var origin: QDPoint
+    private var penPos: QDPoint
+    private var roundRectCornerSize: QDPoint
 
     var imageRep: NSBitmapImageRep
     var format: ImageFormat = .unknown
@@ -47,6 +50,8 @@ extension Picture {
 
         origin = frame.origin
         clipRect = frame
+        penPos = QDPoint(x: 0, y: 0)
+        roundRectCornerSize = QDPoint(x: 8, y: 8)
         imageRep = ImageFormat.rgbaRep(width: frame.width, height: frame.height)
         if readOps {
             try self.readOps(reader)
@@ -71,8 +76,49 @@ extension Picture {
 
     private mutating func readOps(_ reader: BinaryDataReader) throws {
         let readOp = v1 ? PictOpcode.read1 : PictOpcode.read2
+        var bitmapInfo: UInt32 = 0
+        if imageRep.bitmapFormat.contains(.floatingPointSamples) {
+            bitmapInfo |= CGBitmapInfo.floatComponents.rawValue
+        }
+        if imageRep.bitmapFormat.contains(.sixteenBitLittleEndian) {
+            bitmapInfo |= CGBitmapInfo.byteOrder16Little.rawValue
+        }
+        if imageRep.bitmapFormat.contains(.thirtyTwoBitLittleEndian) {
+            bitmapInfo |= CGBitmapInfo.byteOrder32Little.rawValue
+        }
+        if imageRep.bitmapFormat.contains(.sixteenBitBigEndian) {
+            bitmapInfo |= CGBitmapInfo.byteOrder16Big.rawValue
+        }
+        if imageRep.bitmapFormat.contains(.thirtyTwoBitBigEndian) {
+            bitmapInfo |= CGBitmapInfo.byteOrder32Big.rawValue
+        }
+        if imageRep.bitmapFormat.contains(.alphaFirst) {
+            if imageRep.bitmapFormat.contains(.alphaNonpremultiplied) {
+                bitmapInfo |= CGImageAlphaInfo.first.rawValue
+            } else {
+                bitmapInfo |= CGImageAlphaInfo.premultipliedFirst.rawValue
+            }
+        } else {
+            if imageRep.bitmapFormat.contains(.alphaNonpremultiplied) {
+                bitmapInfo |= CGImageAlphaInfo.last.rawValue
+            } else {
+                bitmapInfo |= CGImageAlphaInfo.premultipliedLast.rawValue
+            }
+        }
+        guard let ctx = CGContext(data: imageRep.bitmapData,
+                                  width: imageRep.pixelsWide,
+                                  height: imageRep.pixelsHigh,
+                                  bitsPerComponent: imageRep.bitsPerSample,
+                                  bytesPerRow: imageRep.bytesPerRow,
+                                  space: imageRep.colorSpace.cgColorSpace!,
+                                  bitmapInfo: bitmapInfo,
+                                  releaseCallback: nil,
+                                  releaseInfo: nil) else {
+            throw  PictureError.cantCreateContext
+        }
     ops:while true {
-            switch try readOp(reader) {
+            let currOp = try readOp(reader)
+            switch currOp {
             case .opEndPicture:
                 break ops
             case .clipRegion:
@@ -92,16 +138,56 @@ extension Picture {
             case .directBitsRegion:
                 try self.readDirectBits(reader, withMaskRegion: true)
             case .nop, .hiliteMode, .defHilite,
-                    .frameSameRect, .paintSameRect, .eraseSameRect, .invertSameRect, .fillSameRect:
+                    .frameSameRect, .paintSameRect, .eraseSameRect, .invertSameRect, .fillSameRect,
+                    .frameSameOval, .paintSameOval, .eraseSameOval, .invertSameOval, .fillSameOval,
+                    .frameSameRoundRect, .paintSameRoundRect, .eraseSameRoundRect, .invertSameRoundRect, .fillSameRoundRect:
                 continue
-            case .penMode, .shortLineFrom, .shortComment:
+            case .penMode:
                 try reader.advance(2)
-            case .penSize, .lineFrom:
+            case .shortLineFrom:
+                let dh: Int8 = try reader.read(bigEndian: true)
+                let dv: Int8 = try reader.read(bigEndian: true)
+                let ep = CGPoint(x: CGFloat(penPos.x + Int(dh)), y: CGFloat(penPos.y + Int(dv)))
+                ctx.addLine(to: ep)
+                penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
+            case .shortComment:
+                try reader.advance(2)
+            case .penSize:
                 try reader.advance(4)
-            case .shortLine, .rgbFgColor, .rgbBkCcolor, .hiliteColor, .opColor:
+            case .lineFrom:
+                let dh: Int16 = try reader.read(bigEndian: true)
+                let dv: Int16 = try reader.read(bigEndian: true)
+                let ep = CGPoint(x: CGFloat(penPos.x + Int(dh)), y: CGFloat(penPos.y + Int(dv)))
+                ctx.addLine(to: ep)
+                penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
+            case .shortLine:
+                let sh: Int16 = try reader.read(bigEndian: true)
+                let sv: Int16 = try reader.read(bigEndian: true)
+                let sp = CGPoint(x: CGFloat(sh), y: CGFloat(sv))
+                let dh: Int8 = try reader.read(bigEndian: true)
+                let dv: Int8 = try reader.read(bigEndian: true)
+                let ep = CGPoint(x: sp.x + CGFloat(sh), y: sp.y + CGFloat(sv))
+                penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
+                ctx.move(to: sp)
+                ctx.addLine(to: CGPoint(x: CGFloat(dh), y: CGFloat(dv)))
+            case .rgbFgColor, .rgbBkCcolor, .hiliteColor, .opColor:
                 try reader.advance(6)
-            case .penPattern, .fillPattern, .line,
+            case .line:
+                let sh: Int16 = try reader.read(bigEndian: true)
+                let sv: Int16 = try reader.read(bigEndian: true)
+                let sp = CGPoint(x: CGFloat(sh), y: CGFloat(sv))
+                let dh: Int16 = try reader.read(bigEndian: true)
+                let dv: Int16 = try reader.read(bigEndian: true)
+                let ep = CGPoint(x: sp.x + CGFloat(sh), y: sp.y + CGFloat(sv))
+                penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
+                ctx.move(to: sp)
+                ctx.addLine(to: CGPoint(x: CGFloat(dh), y: CGFloat(dv)))
+            case .penPattern, .fillPattern,
                     .frameRect, .paintRect, .eraseRect, .invertRect, .fillRect:
+                try reader.advance(8)
+            case .frameOval, .paintOval, .eraseOval, .invertOval, .fillOval:
+                try reader.advance(8)
+            case .frameRoundRect, .paintRoundRect, .eraseRoundRect, .invertRoundRect, .fillRoundRect:
                 try reader.advance(8)
             case .frameRegion, .paintRegion, .eraseRegion, .invertRegion, .fillRegion:
                 try self.skipRegion(reader)
@@ -115,14 +201,18 @@ extension Picture {
                 // Uncompressed QuickTime contains a matte which we can skip over. Actual image data should follow.
                 let length = Int(try reader.read() as UInt32)
                 try reader.advance(length)
-            default:
-                throw ImageReaderError.unsupported
+            case .versionOp, .version, .headerOp:
+                break // We already parsed these at the start.
+            case .roundRectOvalSize:
+                let ovalV = Int(try reader.read() as Int16)
+                let ovalH = Int(try reader.read() as Int16)
+                roundRectCornerSize = QDPoint(x: ovalH, y: ovalV)
             }
         }
 
         // If we reached the end and have nothing to show for it then we should fail
         if case .unknown = format {
-            throw ImageReaderError.unsupported
+            throw ImageReaderError.unsupportedFormat
         }
     }
 
@@ -258,6 +348,8 @@ extension Picture {
         frame = try QDRect(for: imageRep)
         clipRect = frame
         origin = frame.origin
+        penPos = QDPoint(x: 0, y: 0)
+        roundRectCornerSize = QDPoint(x: 8, y: 8)
     }
 
     static func data(from rep: NSBitmapImageRep, format: inout ImageFormat) throws -> Data {
@@ -413,6 +505,7 @@ enum PictOpcode: UInt16 {
     case penMode = 0x0008
     case penPattern = 0x0009
     case fillPattern = 0x000A
+    case roundRectOvalSize = 0x000B
     case origin = 0x000C
     case versionOp = 0x0011
     case rgbFgColor = 0x001A
@@ -435,6 +528,26 @@ enum PictOpcode: UInt16 {
     case eraseSameRect = 0x003A
     case invertSameRect = 0x003B
     case fillSameRect = 0x003C
+    case frameRoundRect = 0x0040
+    case paintRoundRect = 0x0041
+    case eraseRoundRect = 0x0042
+    case invertRoundRect = 0x0043
+    case fillRoundRect = 0x0044
+    case frameSameRoundRect = 0x0048
+    case paintSameRoundRect = 0x0049
+    case eraseSameRoundRect = 0x004A
+    case invertSameRoundRect = 0x004B
+    case fillSameRoundRect = 0x004C
+    case frameOval = 0x0050
+    case paintOval = 0x0051
+    case eraseOval = 0x0052
+    case invertOval = 0x0053
+    case fillOval = 0x0054
+    case frameSameOval = 0x0058
+    case paintSameOval = 0x0059
+    case eraseSameOval = 0x005A
+    case invertSameOval = 0x005B
+    case fillSameOval = 0x005C
     case bitsRect = 0x0090
     case bitsRegion = 0x0091
     case packBitsRect = 0x0098
@@ -458,16 +571,28 @@ enum PictOpcode: UInt16 {
         if reader.bytesRead % 2 == 1 {
             try reader.advance(1)
         }
-        guard let op = Self.init(rawValue: try reader.read()) else {
-            throw ImageReaderError.unsupported
+        let currOp: RawValue = try reader.read()
+        guard let op = Self.init(rawValue: currOp) else {
+            throw ImageReaderError.unsupported(opcode: currOp)
         }
         return op
     }
 
     static func read1(_ reader: BinaryDataReader) throws -> Self {
-        guard let op = Self.init(rawValue: UInt16(try reader.read() as UInt8)) else {
-            throw ImageReaderError.unsupported
+        let currOp = UInt16(try reader.read() as UInt8)
+        guard let op = Self.init(rawValue: currOp) else {
+            throw ImageReaderError.unsupported(opcode: currOp)
         }
         return op
+    }
+}
+
+public enum PictureError: LocalizedError {
+    case cantCreateContext
+    public var errorDescription: String? {
+        switch self {
+        case .cantCreateContext:
+            return NSLocalizedString("Failed to create graphics context.", comment: "")
+        }
     }
 }

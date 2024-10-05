@@ -92,7 +92,7 @@ extension QTImageDesc {
             try reader.advance(bytesUntilData)
             let data = try reader.readData(length: Int(dataSize))
             guard let rep = NSBitmapImageRep(data: data) else {
-                throw ImageReaderError.unsupported
+                throw ImageReaderError.unsupportedFormat
             }
             if depth == 32 {
                 // Older QuickTime versions (<6.5) stored data as non-standard RGBX
