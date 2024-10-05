@@ -13,6 +13,7 @@ struct Picture {
     private var clipPath: NSBezierPath?
     private var origin: QDPoint
     private var penPos: QDPoint
+    private var lastRect: QDRect
     private var roundRectCornerSize: QDPoint
 
     var imageRep: NSBitmapImageRep
@@ -51,6 +52,7 @@ extension Picture {
         origin = frame.origin
         clipRect = frame
         penPos = QDPoint(x: 0, y: 0)
+        lastRect = QDRect(top: 0, left: 0, bottom: 0, right: 0)
         roundRectCornerSize = QDPoint(x: 8, y: 8)
         imageRep = ImageFormat.rgbaRep(width: frame.width, height: frame.height)
         if readOps {
@@ -137,11 +139,38 @@ extension Picture {
                 try self.readDirectBits(reader, withMaskRegion: false)
             case .directBitsRegion:
                 try self.readDirectBits(reader, withMaskRegion: true)
-            case .nop, .hiliteMode, .defHilite,
-                    .frameSameRect, .paintSameRect, .eraseSameRect, .invertSameRect, .fillSameRect,
-                    .frameSameOval, .paintSameOval, .eraseSameOval, .invertSameOval, .fillSameOval,
-                    .frameSameRoundRect, .paintSameRoundRect, .eraseSameRoundRect, .invertSameRoundRect, .fillSameRoundRect:
+            case .nop, .hiliteMode, .defHilite:
                 continue
+            case .frameSameRect:
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
+                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                ctx.addRect(cgBox)
+                ctx.strokePath()
+            case .paintSameRect, .eraseSameRect, .invertSameRect, .fillSameRect:
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
+                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                ctx.addRect(cgBox)
+                ctx.fillPath()
+            case .frameSameOval:
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
+                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                ctx.addEllipse(in: cgBox)
+                ctx.strokePath()
+            case .paintSameOval, .eraseSameOval, .invertSameOval, .fillSameOval:
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
+                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                ctx.addEllipse(in: cgBox)
+                ctx.fillPath()
+            case .frameSameRoundRect:
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
+                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                ctx.addRect(cgBox)
+                ctx.strokePath()
+            case .paintSameRoundRect, .eraseSameRoundRect, .invertSameRoundRect, .fillSameRoundRect:
+                let cgBox = CGRect(origin: CGPoint(x: CGFloat(lastRect.left), y: CGFloat(lastRect.top)),
+                                   size: CGSize(width: CGFloat(lastRect.right - lastRect.left), height: CGFloat(lastRect.bottom - lastRect.top)))
+                ctx.addRect(cgBox)
+                ctx.fillPath()
             case .penMode:
                 try reader.advance(2)
             case .shortLineFrom:
@@ -154,7 +183,8 @@ extension Picture {
             case .shortComment:
                 try reader.advance(2)
             case .penSize:
-                try reader.advance(4)
+                let s = try QDPoint(reader)
+                ctx.setLineWidth(CGFloat(max(s.x, s.y)))
             case .lineFrom:
                 let dh: Int16 = try reader.read(bigEndian: true)
                 let dv: Int16 = try reader.read(bigEndian: true)
@@ -166,12 +196,12 @@ extension Picture {
                 let sh: Int16 = try reader.read(bigEndian: true)
                 let sv: Int16 = try reader.read(bigEndian: true)
                 let sp = CGPoint(x: CGFloat(sh), y: CGFloat(sv))
-                let dh: Int8 = try reader.read(bigEndian: true)
-                let dv: Int8 = try reader.read(bigEndian: true)
-                let ep = CGPoint(x: sp.x + CGFloat(sh), y: sp.y + CGFloat(sv))
+                let eh: Int8 = try reader.read(bigEndian: true)
+                let ev: Int8 = try reader.read(bigEndian: true)
+                let ep = CGPoint(x: sp.x + CGFloat(eh), y: sp.y + CGFloat(ev))
                 penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
                 ctx.move(to: sp)
-                ctx.addLine(to: CGPoint(x: CGFloat(dh), y: CGFloat(dv)))
+                ctx.addLine(to: ep)
                 ctx.strokePath()
             case .rgbFgColor, .rgbBkCcolor:
                 let red = try reader.read() as UInt16
@@ -185,7 +215,7 @@ extension Picture {
             case .line:
                 let s = try QDPoint(reader)
                 let sp = CGPoint(x: CGFloat(s.x), y: CGFloat(s.y))
-                let e = try QDPoint(reader)
+                var e = try QDPoint(reader)
                 let ep = CGPoint(x: CGFloat(e.x), y: CGFloat(e.y))
                 penPos = e
                 ctx.move(to: sp)
@@ -199,36 +229,42 @@ extension Picture {
                                    size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
                 ctx.addRect(cgBox)
                 ctx.strokePath()
+                lastRect = box
             case .paintRect, .eraseRect, .invertRect, .fillRect:
                 let box = try QDRect(reader)
                 let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
                                    size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
                 ctx.addRect(cgBox)
                 ctx.fillPath()
+                lastRect = box
             case .frameOval:
                 let box = try QDRect(reader)
                 let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
                                    size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
                 ctx.addEllipse(in: cgBox)
                 ctx.strokePath()
+                lastRect = box
             case .paintOval, .eraseOval, .invertOval, .fillOval:
                 let box = try QDRect(reader)
                 let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
                                    size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
                 ctx.addEllipse(in: cgBox)
                 ctx.fillPath()
+                lastRect = box
             case .frameRoundRect:
                 let box = try QDRect(reader)
                 let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
                                    size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
                 ctx.addRect(cgBox)
                 ctx.strokePath()
+                lastRect = box
             case .paintRoundRect, .eraseRoundRect, .invertRoundRect, .fillRoundRect:
                 let box = try QDRect(reader)
                 let cgBox = CGRect(origin: CGPoint(x: CGFloat(box.left), y: CGFloat(box.top)),
                                    size: CGSize(width: CGFloat(box.right - box.left), height: CGFloat(box.bottom - box.top)))
                 ctx.addRect(cgBox)
                 ctx.fillPath()
+                lastRect = box
             case .frameRegion, .paintRegion, .eraseRegion, .invertRegion, .fillRegion:
                 try self.skipRegion(reader)
             case .longComment:
@@ -389,6 +425,7 @@ extension Picture {
         clipRect = frame
         origin = frame.origin
         penPos = QDPoint(x: 0, y: 0)
+        lastRect = QDRect(top: 0, left: 0, bottom: 0, right: 0)
         roundRectCornerSize = QDPoint(x: 8, y: 8)
     }
 
