@@ -16,10 +16,10 @@ struct Picture {
     private var lastRect = QDRect(top: 0, left: 0, bottom: 0, right: 0)
     private var roundRectCornerSize = QDPoint(x: 8, y: 8)
     private var penSize = QDPoint(x: 1, y: 1)
-    private var fgColor = CGColor(gray: 0.0, alpha: 1.0)
-    private var bgColor = CGColor(gray: 1.0, alpha: 1.0)
-    private var penColor = CGColor(gray: 0.0, alpha: 1.0) // FG + BG + pattern
-    private var penPattern = NSData(bytes: [UInt8(0xff), UInt8(0xff), UInt8(0xff), UInt8(0xff), UInt8(0xff), UInt8(0xff), UInt8(0xff), UInt8(0xff)], length: 8)
+    private var fgColor = CGColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0)
+    private var bgColor = CGColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+    private var penColor = CGColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0) // FG + BG + pattern
+    private var penPattern: CGImage?
     private var fillPattern = NSData(bytes: [UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0), UInt8(0)], length: 8)
 
     var imageRep: NSBitmapImageRep
@@ -99,21 +99,51 @@ extension Picture {
                       size: CGSize(width: CGFloat(rect.right - rect.left) - sizeInset, height: CGFloat(rect.bottom - rect.top) - sizeInset))
     }
     
-    private mutating func updatePenColor() {
-        penColor = fgColor
+    private mutating func updatePenColor(pattern: Data? = nil) {
         #if false
+        penColor = fgColor
+        #else
         let bounds = CGRect(x: 0, y: 0, width: 8, height: 8)
         var callbacks = CGPatternCallbacks(version: 0, drawPattern: { info, ctx in
-            let penPattern: NSData = Unmanaged.fromOpaque(info!).takeUnretainedValue()
-        }, releaseInfo: nil)
+            ctx.saveGState()
+            let penPattern: CGImage = Unmanaged.fromOpaque(info!).takeUnretainedValue()
+            ctx.draw(penPattern, in: CGRect(x: 0, y: 0, width: 8, height: 8))
+            ctx.restoreGState()
+        }, releaseInfo: { info in
+            Unmanaged<CGImage>.fromOpaque(info!).release()
+        })
 
-        let pattern = CGPattern(info: Unmanaged.passUnretained(self.penPattern).toOpaque(), bounds: bounds, matrix: .identity, xStep: bounds.width, yStep: bounds.height, tiling: .noDistortion, isColored: true, callbacks: &callbacks)!
-        penColor = CGColor(patternSpace: .init(patternBaseSpace: .init(name: CGColorSpace.sRGB))!, pattern: pattern, components: [CGFloat(0.0)])!
+        if penPattern == nil || pattern != nil {
+            let fr = UInt8(fgColor.components![0] * 255.0), fg = UInt8(fgColor.components![1] * 255.0), fb = UInt8(fgColor.components![2] * 255.0)
+            let br = UInt8(bgColor.components![0] * 255.0), bg = UInt8(bgColor.components![1] * 255.0), bb = UInt8(bgColor.components![2] * 255.0)
+            var patBytes = [UInt8](repeating: 0xff, count: 4 * Int(bounds.width) * Int(bounds.height))
+            for y in 0..<Int(bounds.height) {
+                let currByte = pattern?[pattern!.startIndex + y] ?? 0xff
+                assert(bounds.width == 8.0)
+                for rx in 0..<8 {
+                    let x = 7 - rx
+                    let blackPixel = (currByte & (1 << x)) != 0
+                    patBytes[(Int(bounds.height) * y + x) * 4 + 0] = blackPixel ? fr : br
+                    patBytes[(Int(bounds.height) * y + x) * 4 + 1] = blackPixel ? fg : bg
+                    patBytes[(Int(bounds.height) * y + x) * 4 + 2] = blackPixel ? fb : bb
+                    patBytes[(Int(bounds.height) * y + x) * 4 + 3] = 0x00
+                }
+            }
+            let bir = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 8, pixelsHigh: 8, bitsPerSample: 8, samplesPerPixel: 3, hasAlpha: false, isPlanar: false, colorSpaceName: .calibratedRGB, bytesPerRow: 4 * 8, bitsPerPixel: 32)
+            patBytes.withUnsafeBytes { (patternBytes: UnsafeRawBufferPointer) in
+                _ = memcpy(bir?.bitmapData, patternBytes.baseAddress, 4 * Int(bounds.width) * Int(bounds.height))
+            }
+            penPattern = bir?.cgImage
+        }
+        let pattern = CGPattern(info: Unmanaged.passRetained(self.penPattern!).toOpaque(), bounds: bounds, matrix: .identity, xStep: bounds.width, yStep: bounds.height, tiling: .noDistortion, isColored: false, callbacks: &callbacks)!
+        let bs = CGColorSpace(name: CGColorSpace.sRGB)!
+        let cs = CGColorSpace(patternBaseSpace: bs)!
+        penColor = CGColor(patternSpace: cs, pattern: pattern, components: [CGFloat(0.0), CGFloat(0.0), CGFloat(0.0), CGFloat(1.0)])!
         #endif
     }
     
     private mutating func updateFillColor() {
-        penColor = fgColor
+        //penColor = fgColor
         #if false
         let bounds = CGRect(x: 0, y: 0, width: 8, height: 8)
         var callbacks = CGPatternCallbacks(version: 0, drawPattern: { info, ctx in
@@ -167,6 +197,8 @@ extension Picture {
                                   releaseInfo: nil) else {
             throw  PictureError.cantCreateContext
         }
+        ctx.move(to: flipped(point: penPos))
+
     ops:while true {
             let currOp = try readOp(reader)
             switch currOp {
@@ -191,12 +223,12 @@ extension Picture {
             case .nop, .hiliteMode, .defHilite:
                 continue
             case .frameSameRect:
-                ctx.setStrokeColor(fgColor)
+                ctx.setStrokeColor(penColor)
                 let cgBox = flipped(rect: lastRect, for: .stroke)
                 ctx.addRect(cgBox)
                 ctx.strokePath()
             case .paintSameRect, .fillSameRect, .invertSameRect:
-                ctx.setFillColor(fgColor)
+                ctx.setFillColor(penColor)
                 let cgBox = flipped(rect: lastRect, for: .fill)
                 ctx.addRect(cgBox)
                 ctx.fillPath()
@@ -206,12 +238,12 @@ extension Picture {
                 ctx.addRect(cgBox)
                 ctx.fillPath()
             case .frameSameOval:
-                ctx.setStrokeColor(fgColor)
+                ctx.setStrokeColor(penColor)
                 let cgBox = flipped(rect: lastRect, for: .stroke)
                 ctx.addEllipse(in: cgBox)
                 ctx.strokePath()
             case .paintSameOval, .invertSameOval, .fillSameOval:
-                ctx.setFillColor(fgColor)
+                ctx.setFillColor(penColor)
                 let cgBox = flipped(rect: lastRect, for: .fill)
                 ctx.addEllipse(in: cgBox)
                 ctx.fillPath()
@@ -221,12 +253,12 @@ extension Picture {
                 ctx.addEllipse(in: cgBox)
                 ctx.fillPath()
             case .frameSameRoundRect:
-                ctx.setStrokeColor(fgColor)
+                ctx.setStrokeColor(penColor)
                 let cgBox = flipped(rect: lastRect, for: .stroke)
                 ctx.addRect(cgBox)
                 ctx.strokePath()
             case .paintSameRoundRect, .invertSameRoundRect, .fillSameRoundRect:
-                ctx.setFillColor(fgColor)
+                ctx.setFillColor(penColor)
                 let cgBox = flipped(rect: lastRect, for: .fill)
                 ctx.addRect(cgBox)
                 ctx.fillPath()
@@ -238,38 +270,41 @@ extension Picture {
             case .penMode:
                 try reader.advance(2)
             case .shortLineFrom:
-                ctx.setStrokeColor(fgColor)
+                ctx.setStrokeColor(penColor)
                 let dh: Int8 = try reader.read(bigEndian: true)
                 let dv: Int8 = try reader.read(bigEndian: true)
                 let ep = flipped(point: QDPoint(x: penPos.x + Int(dh), y: penPos.y + Int(dv)))
                 ctx.addLine(to: ep)
                 ctx.strokePath()
                 penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
+                ctx.move(to: flipped(point: penPos))
             case .shortComment:
                 try reader.advance(2)
             case .penSize:
                 penSize = try QDPoint(reader)
                 ctx.setLineWidth(CGFloat(max(penSize.x, penSize.y)))
             case .lineFrom:
-                ctx.setStrokeColor(fgColor)
+                ctx.setStrokeColor(penColor)
                 let dh: Int16 = try reader.read(bigEndian: true)
                 let dv: Int16 = try reader.read(bigEndian: true)
                 let ep = flipped(point: QDPoint(x: penPos.x + Int(dh), y: penPos.y + Int(dv)))
                 ctx.addLine(to: ep)
                 ctx.strokePath()
                 penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
+                ctx.move(to: flipped(point: penPos))
             case .shortLine:
-                ctx.setStrokeColor(fgColor)
+                ctx.setStrokeColor(penColor)
                 let sh = Int(try reader.read(bigEndian: true) as Int16)
                 let sv = Int(try reader.read(bigEndian: true) as Int16)
                 let sp = flipped(point: QDPoint(x: sh, y: sv))
                 let eh = Int(try reader.read(bigEndian: true) as Int8)
                 let ev = Int(try reader.read(bigEndian: true) as Int8)
                 let ep = flipped(point: QDPoint(x: sh + eh, y: sv + ev))
-                penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
                 ctx.move(to: sp)
                 ctx.addLine(to: ep)
                 ctx.strokePath()
+                penPos = QDPoint(x: Int(ep.x), y: Int(ep.y))
+                ctx.move(to: flipped(point: penPos))
             case .rgbFgColor:
                 let red = try reader.read() as UInt16
                 let green = try reader.read() as UInt16
@@ -287,7 +322,7 @@ extension Picture {
             case .hiliteColor, .opColor:
                 try reader.advance(6)
             case .line:
-                ctx.setStrokeColor(fgColor)
+                ctx.setStrokeColor(penColor)
                 let sp = flipped(point: try QDPoint(reader))
                 let e = try QDPoint(reader)
                 let ep = flipped(point: e)
@@ -296,20 +331,19 @@ extension Picture {
                 ctx.addLine(to: ep)
                 ctx.strokePath()
             case .penPattern:
-                penPattern = try reader.readData(length: 8) as NSData
-                updatePenColor()
+                updatePenColor(pattern: try reader.readData(length: 8))
             case .fillPattern:
                 fillPattern = try reader.readData(length: 8) as NSData
                 updateFillColor()
             case .frameRect:
-                ctx.setStrokeColor(fgColor)
+                ctx.setStrokeColor(penColor)
                 let box = try QDRect(reader)
                 let cgBox = flipped(rect: box, for: .stroke)
                 ctx.addRect(cgBox)
                 ctx.strokePath()
                 lastRect = box
             case .paintRect, .invertRect, .fillRect:
-                ctx.setFillColor(fgColor)
+                ctx.setFillColor(penColor)
                 let box = try QDRect(reader)
                 let cgBox = flipped(rect: box, for: .fill)
                 ctx.addRect(cgBox)
@@ -323,14 +357,14 @@ extension Picture {
                 ctx.fillPath()
                 lastRect = box
             case .frameOval:
-                ctx.setStrokeColor(fgColor)
+                ctx.setStrokeColor(penColor)
                 let box = try QDRect(reader)
                 let cgBox = flipped(rect: box, for: .stroke)
                 ctx.addEllipse(in: cgBox)
                 ctx.strokePath()
                 lastRect = box
             case .paintOval, .invertOval, .fillOval:
-                ctx.setFillColor(fgColor)
+                ctx.setFillColor(penColor)
                 let box = try QDRect(reader)
                 let cgBox = flipped(rect: box, for: .fill)
                 ctx.addEllipse(in: cgBox)
@@ -344,14 +378,14 @@ extension Picture {
                 ctx.fillPath()
                 lastRect = box
             case .frameRoundRect:
-                ctx.setStrokeColor(fgColor)
+                ctx.setStrokeColor(penColor)
                 let box = try QDRect(reader)
                 let cgBox = flipped(rect: box, for: .stroke)
                 ctx.addRect(cgBox)
                 ctx.strokePath()
                 lastRect = box
             case .paintRoundRect, .invertRoundRect, .fillRoundRect:
-                ctx.setFillColor(fgColor)
+                ctx.setFillColor(penColor)
                 let box = try QDRect(reader)
                 let cgBox = flipped(rect: box, for: .fill)
                 ctx.addRect(cgBox)
