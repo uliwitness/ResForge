@@ -116,12 +116,13 @@ extension Picture {
         let fr = UInt8(fgColor.components![0] * 255.0), fg = UInt8(fgColor.components![1] * 255.0), fb = UInt8(fgColor.components![2] * 255.0)
         let br = UInt8(bgColor.components![0] * 255.0), bg = UInt8(bgColor.components![1] * 255.0), bb = UInt8(bgColor.components![2] * 255.0)
         var patBytes = [UInt8](repeating: 0xff, count: 4 * Int(bounds.width) * Int(bounds.height))
-        for y in 0..<Int(bounds.height) {
+        for ry in 0..<Int(bounds.height) {
+            let y = Int(bounds.height - 1.0) - ry
             let currByte = pattern?[pattern!.startIndex + y] ?? 0xff
             assert(bounds.width == 8.0)
-            for rx in 0..<8 {
-                let x = 7 - rx
-                let blackPixel = (currByte & (1 << x)) != 0
+            for xr in 0..<8 {
+                let x = 7 - xr
+                let blackPixel = (currByte & (1 << xr)) != 0
                 patBytes[(Int(bounds.height) * y + x) * 4 + 0] = blackPixel ? fr : br
                 patBytes[(Int(bounds.height) * y + x) * 4 + 1] = blackPixel ? fg : bg
                 patBytes[(Int(bounds.height) * y + x) * 4 + 2] = blackPixel ? fb : bb
@@ -152,26 +153,27 @@ extension Picture {
             Unmanaged<CGImage>.fromOpaque(info!).release()
         })
 
-            let fr = UInt8(fgColor.components![0] * 255.0), fg = UInt8(fgColor.components![1] * 255.0), fb = UInt8(fgColor.components![2] * 255.0)
-            let br = UInt8(bgColor.components![0] * 255.0), bg = UInt8(bgColor.components![1] * 255.0), bb = UInt8(bgColor.components![2] * 255.0)
-            var patBytes = [UInt8](repeating: 0xff, count: 4 * Int(bounds.width) * Int(bounds.height))
-            for y in 0..<Int(bounds.height) {
-                let currByte = pattern?[pattern!.startIndex + y] ?? 0x00
-                assert(bounds.width == 8.0)
-                for rx in 0..<8 {
-                    let x = 7 - rx
-                    let blackPixel = (currByte & (1 << x)) != 0
-                    patBytes[(Int(bounds.height) * y + x) * 4 + 0] = blackPixel ? fr : br
-                    patBytes[(Int(bounds.height) * y + x) * 4 + 1] = blackPixel ? fg : bg
-                    patBytes[(Int(bounds.height) * y + x) * 4 + 2] = blackPixel ? fb : bb
-                    patBytes[(Int(bounds.height) * y + x) * 4 + 3] = 0x00
-                }
+        let fr = UInt8(fgColor.components![0] * 255.0), fg = UInt8(fgColor.components![1] * 255.0), fb = UInt8(fgColor.components![2] * 255.0)
+        let br = UInt8(bgColor.components![0] * 255.0), bg = UInt8(bgColor.components![1] * 255.0), bb = UInt8(bgColor.components![2] * 255.0)
+        var patBytes = [UInt8](repeating: 0xff, count: 4 * Int(bounds.width) * Int(bounds.height))
+        for ry in 0..<Int(bounds.height) {
+            let y = Int(bounds.height - 1.0) - ry
+            let currByte = pattern?[pattern!.startIndex + y] ?? 0x00
+            assert(bounds.width == 8.0)
+            for xr in 0..<8 {
+                let x = 7 - xr
+                let blackPixel = (currByte & (1 << xr)) != 0
+                patBytes[(Int(bounds.height) * y + x) * 4 + 0] = blackPixel ? fr : br
+                patBytes[(Int(bounds.height) * y + x) * 4 + 1] = blackPixel ? fg : bg
+                patBytes[(Int(bounds.height) * y + x) * 4 + 2] = blackPixel ? fb : bb
+                patBytes[(Int(bounds.height) * y + x) * 4 + 3] = 0x00
             }
-            let bir = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 8, pixelsHigh: 8, bitsPerSample: 8, samplesPerPixel: 3, hasAlpha: false, isPlanar: false, colorSpaceName: .calibratedRGB, bytesPerRow: 4 * 8, bitsPerPixel: 32)
-            patBytes.withUnsafeBytes { (patternBytes: UnsafeRawBufferPointer) in
-                _ = memcpy(bir?.bitmapData, patternBytes.baseAddress, 4 * Int(bounds.width) * Int(bounds.height))
-            }
-            fillPatternImage = bir?.cgImage
+        }
+        let bir = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 8, pixelsHigh: 8, bitsPerSample: 8, samplesPerPixel: 3, hasAlpha: false, isPlanar: false, colorSpaceName: .calibratedRGB, bytesPerRow: 4 * 8, bitsPerPixel: 32)
+        patBytes.withUnsafeBytes { (patternBytes: UnsafeRawBufferPointer) in
+            _ = memcpy(bir?.bitmapData, patternBytes.baseAddress, 4 * Int(bounds.width) * Int(bounds.height))
+        }
+        fillPatternImage = bir?.cgImage
         if pattern != nil { fillPattern = pattern }
 
         let cgPattern = CGPattern(info: Unmanaged.passRetained(self.penPatternImage!).toOpaque(), bounds: bounds, matrix: .identity, xStep: bounds.width, yStep: bounds.height, tiling: .noDistortion, isColored: false, callbacks: &callbacks)!
@@ -290,22 +292,22 @@ extension Picture {
             case .frameSameRoundRect:
                 ctx.setStrokeColor(penColor)
                 let cgBox = flipped(rect: lastRect, for: .stroke)
-                ctx.addRect(cgBox)
+                ctx.addPath(CGPath(roundedRect: cgBox, cornerWidth: CGFloat(roundRectCornerSize.x), cornerHeight: CGFloat(roundRectCornerSize.y), transform: nil))
                 ctx.strokePath()
             case .paintSameRoundRect, .invertSameRoundRect:
                 ctx.setFillColor(penColor)
                 let cgBox = flipped(rect: lastRect, for: .fill)
-                ctx.addRect(cgBox)
+                ctx.addPath(CGPath(roundedRect: cgBox, cornerWidth: CGFloat(roundRectCornerSize.x), cornerHeight: CGFloat(roundRectCornerSize.y), transform: nil))
                 ctx.fillPath()
             case .fillSameRoundRect:
                 ctx.setFillColor(fillColor)
                 let cgBox = flipped(rect: lastRect, for: .fill)
-                ctx.addRect(cgBox)
+                ctx.addPath(CGPath(roundedRect: cgBox, cornerWidth: CGFloat(roundRectCornerSize.x), cornerHeight: CGFloat(roundRectCornerSize.y), transform: nil))
                 ctx.fillPath()
             case .eraseSameRoundRect:
                 ctx.setFillColor(bgColor)
                 let cgBox = flipped(rect: lastRect, for: .fill)
-                ctx.addRect(cgBox)
+                ctx.addPath(CGPath(roundedRect: cgBox, cornerWidth: CGFloat(roundRectCornerSize.x), cornerHeight: CGFloat(roundRectCornerSize.y), transform: nil))
                 ctx.fillPath()
             case .penMode:
                 try reader.advance(2)
@@ -436,28 +438,28 @@ extension Picture {
                 ctx.setStrokeColor(penColor)
                 let box = try QDRect(reader)
                 let cgBox = flipped(rect: box, for: .stroke)
-                ctx.addRect(cgBox)
+                ctx.addPath(CGPath(roundedRect: cgBox, cornerWidth: CGFloat(roundRectCornerSize.x), cornerHeight: CGFloat(roundRectCornerSize.y), transform: nil))
                 ctx.strokePath()
                 lastRect = box
             case .paintRoundRect, .invertRoundRect:
                 ctx.setFillColor(penColor)
                 let box = try QDRect(reader)
                 let cgBox = flipped(rect: box, for: .fill)
-                ctx.addRect(cgBox)
+                ctx.addPath(CGPath(roundedRect: cgBox, cornerWidth: CGFloat(roundRectCornerSize.x), cornerHeight: CGFloat(roundRectCornerSize.y), transform: nil))
                 ctx.fillPath()
                 lastRect = box
             case .fillRoundRect:
                 ctx.setFillColor(fillColor)
                 let box = try QDRect(reader)
                 let cgBox = flipped(rect: box, for: .fill)
-                ctx.addRect(cgBox)
+                ctx.addPath(CGPath(roundedRect: cgBox, cornerWidth: CGFloat(roundRectCornerSize.x), cornerHeight: CGFloat(roundRectCornerSize.y), transform: nil))
                 ctx.fillPath()
                 lastRect = box
             case .eraseRoundRect:
                 ctx.setFillColor(bgColor)
                 let box = try QDRect(reader)
                 let cgBox = flipped(rect: box, for: .fill)
-                ctx.addRect(cgBox)
+                ctx.addPath(CGPath(roundedRect: cgBox, cornerWidth: CGFloat(roundRectCornerSize.x), cornerHeight: CGFloat(roundRectCornerSize.y), transform: nil))
                 ctx.fillPath()
                 lastRect = box
             case .frameRegion, .paintRegion, .eraseRegion, .invertRegion, .fillRegion:
