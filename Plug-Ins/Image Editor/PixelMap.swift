@@ -127,7 +127,7 @@ extension PixelMap {
         return rep
     }
 
-    func draw(_ pixelData: Data, colorTable: [RGBColor]? = nil, to rep: NSBitmapImageRep, in destRect: QDRect, from srcRect: QDRect) throws {
+    func draw(_ pixelData: Data, colorTable: [RGBColor]? = nil, to rep: NSBitmapImageRep, in destRect: QDRect, from srcRect: QDRect, mask maskData: Data? = nil) throws {
         guard rowBytes >= (bounds.width * Int(pixelSize) + 7) / 8,
               pixelData.count >= pixelDataSize,
               destRect.top >= 0,
@@ -161,14 +161,26 @@ extension PixelMap {
                 let mod = 8 / depth
                 let mask = (1 << depth) - 1
                 let diff = 8 - depth
+                
+                let maskMod = 8
+                let maskMask = 1
+                let maskDiff = 7
+
 
                 for y in yRange {
                     let offset = y * rowBytes
+                    let maskOffset = y * (srcRect.width / 8)
                     for x in xRange {
-                        let byte = Int(pixelData[offset + (x / mod)])
-                        let byteShift = diff - ((x % mod) * depth)
-                        let value = (byte >> byteShift) & mask
-                        colorTable[value].draw(to: &bitmap)
+                        let maskByte = Int(maskData?[offset + (x / 8)] ?? 0xff)
+                        let maskByteShift = 7 - (x % 8)
+                        let maskValue = (maskByte >> maskByteShift) & 1
+
+                        if (maskValue == 1) {
+                            let byte = Int(pixelData[offset + (x / mod)])
+                            let byteShift = diff - ((x % mod) * depth)
+                            let value = (byte >> byteShift) & mask
+                            colorTable[value].draw(to: &bitmap)
+                        }
                     }
                     bitmap += rep.bytesPerRow - (xRange.count * 4)
                 }

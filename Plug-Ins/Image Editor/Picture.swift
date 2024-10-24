@@ -29,6 +29,14 @@ struct Picture {
     var format: ImageFormat = .unknown
 }
 
+struct Region {
+    let bounds: QDRect
+    let bitmap: Data
+    let path: CGPath
+}
+
+
+
 extension Picture {
     init(_ reader: BinaryDataReader, _ readOps: Bool = true) throws {
         try reader.advance(2) // v1 size
@@ -225,14 +233,19 @@ extension Picture {
             throw  PictureError.cantCreateContext
         }
         ctx.move(to: flipped(point: penPos))
-
+        ctx.saveGState() // Make sure we can always reset clip region to open.
+        
     ops:while true {
             let currOp = try readOp(reader)
             switch currOp {
             case .opEndPicture:
                 break ops
             case .clipRegion:
-                try self.readClipRegion(reader)
+                ctx.restoreGState() // Reset clip region to open.
+                ctx.saveGState() // Make sure we can always reset clip region to open.
+                let region = try self.readClipRegion(reader)
+                ctx.addPath(region.path)
+                ctx.clip(using: .evenOdd)
             case .origin:
                 try self.readOrigin(reader)
             case .bitsRect:
@@ -462,7 +475,29 @@ extension Picture {
                 ctx.addPath(CGPath(roundedRect: cgBox, cornerWidth: CGFloat(roundRectCornerSize.x), cornerHeight: CGFloat(roundRectCornerSize.y), transform: nil))
                 ctx.fillPath()
                 lastRect = box
-            case .frameRegion, .paintRegion, .eraseRegion, .invertRegion, .fillRegion:
+            case .frameRegion:
+                let region = try self.readRegion(reader)
+                ctx.setStrokeColor(penColor)
+                ctx.addPath(region.path)
+                ctx.strokePath()
+                try self.skipRegion(reader)
+            case .paintRegion, .invertRegion:
+                let region = try self.readRegion(reader)
+                ctx.setFillColor(penColor)
+                ctx.addPath(region.path)
+                ctx.fillPath()
+                try self.skipRegion(reader)
+            case .eraseRegion:
+                let region = try self.readRegion(reader)
+                ctx.setFillColor(bgColor)
+                ctx.addPath(region.path)
+                ctx.fillPath()
+                try self.skipRegion(reader)
+            case .fillRegion:
+                let region = try self.readRegion(reader)
+                ctx.setFillColor(fillColor)
+                ctx.addPath(region.path)
+                ctx.fillPath()
                 try self.skipRegion(reader)
             case .longComment:
                 try self.skipLongComment(reader)
@@ -482,6 +517,7 @@ extension Picture {
                 roundRectCornerSize = QDPoint(x: ovalH, y: ovalV)
             }
         }
+        ctx.restoreGState() // balance out save above.
 
         // If we reached the end and have nothing to show for it then we should fail
         if case .unknown = format {
@@ -500,9 +536,11 @@ extension Picture {
 
         let (srcRect, destRect) = try self.readSrcAndDestRects(reader)
 
+        var maskRegion: Data?
         try reader.advance(2) // transfer mode
         if withMaskRegion {
-            try self.skipRegion(reader)
+            var bounds = QDRect(top: 0, left: 0, bottom: 0, right: 0)
+            maskRegion = try self.readRegion(reader).bitmap
         }
 
         // Row bytes less than 8 is never packed
@@ -512,7 +550,7 @@ extension Picture {
             try reader.readData(length: pixMap.pixelDataSize)
         }
 
-        try pixMap.draw(pixelData, colorTable: colorTable, to: imageRep, in: destRect, from: srcRect)
+        try pixMap.draw(pixelData, colorTable: colorTable, to: imageRep, in: destRect, from: srcRect, mask: maskRegion)
     }
 
     private mutating func readDirectBits(_ reader: BinaryDataReader, withMaskRegion: Bool) throws {
@@ -521,9 +559,10 @@ extension Picture {
 
         let (srcRect, destRect) = try self.readSrcAndDestRects(reader)
 
+        var maskRegion: Data?
         try reader.advance(2) // transfer mode
         if withMaskRegion {
-            try self.skipRegion(reader)
+            maskRegion = try self.readRegion(reader).bitmap
         }
 
         let pixelData = switch pixMap.resolvedPackType {
@@ -535,7 +574,7 @@ extension Picture {
             try reader.readData(length: pixMap.pixelDataSize)
         }
 
-        try pixMap.draw(pixelData, to: imageRep, in: destRect, from: srcRect)
+        try pixMap.draw(pixelData, to: imageRep, in: destRect, from: srcRect, mask: maskRegion)
     }
 
     private func readSrcAndDestRects(_ reader: BinaryDataReader) throws -> (srcRect: QDRect, destRect: QDRect) {
@@ -566,11 +605,77 @@ extension Picture {
         return (srcRect, destRect)
     }
 
-    private mutating func readClipRegion(_ reader: BinaryDataReader) throws {
-        let length = Int(try reader.read() as UInt16)
-        clipRect = try QDRect(reader)
-        try reader.advance(length - 10)
+    private mutating func readClipRegion(_ reader: BinaryDataReader) throws -> Region {
+        var bounds = QDRect(top: 0, left: 0, bottom: 0, right: 0)
+        let rgn = try readRegion(reader)
+        clipRect = rgn.bounds
+        return rgn
     }
+    
+    private mutating func readRegion(_ reader: BinaryDataReader) throws -> Region {
+        let length = Int(try reader.read() as UInt16)
+        let bounds = try QDRect(reader)
+        let path = CGMutablePath()
+        let rowBytes = (bounds.width + 7) / 8
+        var bitmap = Data(repeating: 0xff, count: rowBytes * bounds.height) // Start out with fully opaque rect.
+        var lastRow = Data(repeating: 0, count: rowBytes)
+        var currentRowStart = bitmap.startIndex
+        var bytesLeft = length - 10
+        var destY = bounds.top
+        if bytesLeft != 0 { // If it's more than a rect, punch holes in the mask.
+            while bytesLeft > 0 {
+                let y = Int(try reader.read() as UInt16)
+                bytesLeft -= MemoryLayout<UInt16>.size
+                if y == 0x7fff {
+                    break
+                }
+                
+                // Duplicate last row until we're told otherwise:
+                while destY < y {
+                    let currentRowEnd = currentRowStart.advanced(by: rowBytes)
+                    bitmap[currentRowStart..<currentRowEnd] = lastRow
+                    currentRowStart = currentRowEnd
+                    destY += 1
+                }
+                
+                while bytesLeft > 0 {
+                    let startX = Int(try reader.read() as UInt16)
+                    bytesLeft -= MemoryLayout<UInt16>.size
+                    if startX == 0x7fff { break }
+                    let endX = Int(try reader.read() as UInt16)
+                    bytesLeft -= MemoryLayout<UInt16>.size
+
+                    lastRow = Data(repeating: 0, count: rowBytes)
+                    for currX in lastRow.startIndex..<lastRow.startIndex.advanced(by: endX - startX) {
+                        let byteIdx = currX / 8
+                        let bitIdxInByte = currX % 8
+                        lastRow[byteIdx] |= 1 << bitIdxInByte
+                    }
+                    let currRowRect = CGRect(x: startX, y: destY, width: endX - startX, height: 1)
+                    path.addRect(currRowRect)
+                    
+                    let currentRowEnd = currentRowStart.advanced(by: rowBytes)
+                    bitmap[currentRowStart..<currentRowEnd] = lastRow
+                    currentRowStart = currentRowEnd
+                    destY += 1
+                }
+            }
+            
+            // Duplicate last row until end:
+            while destY < bounds.bottom {
+                let currentRowEnd = currentRowStart.advanced(by: rowBytes)
+                bitmap[currentRowStart..<currentRowEnd] = lastRow
+                currentRowStart = currentRowEnd
+                destY += 1
+            }
+            try reader.advance(bytesLeft)
+        } else {
+            path.addRect(CGRect(x: bounds.left, y: bounds.top, width: bounds.width, height: bounds.height))
+        }
+        
+        return Region(bounds: bounds, bitmap: bitmap, path: path)
+    }
+
 
     private mutating func readOrigin(_ reader: BinaryDataReader) throws {
         let delta = try QDPoint(reader)
@@ -578,9 +683,8 @@ extension Picture {
         origin.y += delta.y
     }
 
-    private func skipRegion(_ reader: BinaryDataReader) throws {
-        let length = Int(try reader.read() as UInt16)
-        try reader.advance(length - 2)
+    private mutating func skipRegion(_ reader: BinaryDataReader) throws {
+        _ = try readRegion(reader)
     }
 
     private func skipLongComment(_ reader: BinaryDataReader) throws {
